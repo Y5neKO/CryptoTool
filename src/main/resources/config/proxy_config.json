@@ -1,0 +1,6 @@
+{
+	"proxyStatus":false,
+	"proxyPort":8080,
+	"proxyType":"Socks",
+	"proxyHost":"127.0.0.1"
+}

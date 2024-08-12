@@ -1,0 +1,48 @@
+/*轨道样式*/
+.scroll-pane .scroll-bar:horizontal .track,
+.scroll-bar:vertical .track{
+    -fx-background-color: #ffffff;
+    -fx-border-color:transparent;
+    -fx-background-radius: 0em;
+    -fx-border-radius:0em;
+}
+
+/*横向滚动条增减按钮样式*/
+.scroll-pane .scroll-bar:horizontal .increment-button ,
+.scroll-pane .scroll-bar:horizontal .decrement-button {
+    -fx-background-color:transparent;
+    -fx-background-radius: 0em;
+    -fx-padding:0 0 10 0;
+}
+
+/*竖向滚动条增减按钮样式*/
+.scroll-pane .scroll-bar:vertical .increment-button ,
+.scroll-pane .scroll-bar:vertical .decrement-button {
+    -fx-background-color:transparent;
+    -fx-background-radius: 0em;
+    -fx-padding:0 10 0 0;
+}
+
+/*增减按钮中图标样式*/
+.scroll-pane .scroll-bar .increment-arrow,
+.scroll-pane .scroll-bar .decrement-arrow
+{
+    -fx-background-color:transparent;
+    -fx-shape: " ";
+    -fx-padding:0;
+}
+
+/*滚动条滑块样式*/
+.scroll-pane .scroll-bar:horizontal .thumb,
+.scroll-pane .scroll-bar:vertical .thumb {
+    -fx-background-color: #e7e7e7;
+    -fx-background-insets: 2, 0, 0;
+    -fx-background-radius: 2em;
+}
+
+.scroll-pane .focused {
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+    -fx-border-color: -fx-base; /* 或者设置为组件的默认边框颜色 */
+    -fx-border-width: 0.1; /* 或者设置为组件的默认边框宽度 */
+}
