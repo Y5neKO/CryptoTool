@@ -1,5 +1,6 @@
 package com.y5neko.encrypt;
 
+import com.y5neko.tools.Tools;
 import org.bouncycastle.crypto.digests.SM3Digest;
 import org.bouncycastle.util.encoders.Hex;
 
@@ -10,30 +11,31 @@ import java.util.Random;
 
 public class SM3_Encryption {
     public static void main(String[] args) {
-        Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
-
-        // 原始数据
-        byte[] data = "Hello, world!".getBytes();
-
-        // 生成随机盐值
-        byte[] salt = generateSalt();
-
-        // 拼接原始数据和盐值
-        byte[] dataWithSalt = concatBytes(data, salt);
-
-        // 计算SM3哈希值
-        byte[] hash = calculateSM3Hash(dataWithSalt);
-
-        // 转换为16进制字符串
-        String hashHex = bytesToHex(hash);
-        String saltHex = bytesToHex(salt);
-        String hashBase64 = sm3Encrypt("Hello, world!", null, "base64");
-
-        // 输出结果
-        System.out.println("Salt: " + saltHex);
-        System.out.println("Hash: " + hashHex);
-        System.out.println("Base64 hash: " + hashBase64);
-        System.out.println("Base64 hash length: " + hashBase64.length());
+//        Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+//
+//        // 原始数据
+//        byte[] data = "Hello, world!".getBytes();
+//
+//        // 生成随机盐值
+//        byte[] salt = generateSalt();
+//        System.out.println(Arrays.toString(salt));
+//
+//        // 拼接原始数据和盐值
+//        byte[] dataWithSalt = concatBytes(data, salt);
+//
+//        // 计算SM3哈希值
+//        byte[] hash = calculateSM3Hash(dataWithSalt);
+//
+//        // 转换为16进制字符串
+//        String hashHex = bytesToHex(hash);
+//        String saltHex = bytesToHex(salt);
+//        String hashBase64 = sm3Encrypt("Hello, world!", null, "base64");
+//
+//        // 输出结果
+//        System.out.println("Salt: " + saltHex);
+//        System.out.println("Hash: " + hashHex);
+//        System.out.println("Base64 hash: " + hashBase64);
+//        System.out.println("Base64 hash length: " + hashBase64.length());
     }
 
     /**
@@ -42,32 +44,49 @@ public class SM3_Encryption {
      * @param salt 盐值
      * @return SM3加密后的16进制字符串
      */
-    public static String sm3Encrypt(String paramData, byte[] salt, String formatType){
+    public static byte[] sm3Encrypt(String paramData, String inputType, String salt, String saltType){
         Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
 
-        // 原始数据
-        byte[] data = paramData.getBytes();
+        byte[] data = null;
+        byte[] saltBytes = null;
 
-        // 检测是否加盐并拼接原始数据和盐值
-        if (salt != null) {
-            data = concatBytes(data, salt);
+        // 原始数据
+        if(inputType!= null){
+            switch (inputType) {
+                case "Base64":
+                    data = Base64.getDecoder().decode(paramData);
+                    break;
+                case "Hex":
+                    data = Hex.decode(paramData);
+                    break;
+                case "UTF-8":
+                    data = paramData.getBytes();
+                    break;
+                case "Hexdump":
+                    data = Tools.toHexDump(paramData.getBytes()).getBytes();
+            }
+        }
+
+        if(salt!= null){
+            switch (saltType) {
+                case "Base64":
+                    saltBytes = Base64.getDecoder().decode(salt);
+                    break;
+                case "Hex":
+                    saltBytes = Hex.decode(salt);
+                    System.out.println(Arrays.toString(saltBytes));
+                    break;
+                case "UTF-8":
+                    saltBytes = salt.getBytes();
+                    break;
+            }
+            if (saltBytes != null) {
+                data = Tools.concatBytes(data, saltBytes);
+            }
         }
 
         // 计算SM3哈希值
-        byte[] hash = calculateSM3Hash(data);
-
-        // 判断加密类型并返回结果
-        if (formatType != null){
-            if (formatType.equalsIgnoreCase("hex")) {
-                return bytesToHex(hash);
-            } else if (formatType.equalsIgnoreCase("base64")) {
-                return bytesToBase64(hash);
-            } else {
-                return bytesToHex(hash);
-            }
-        } else {
-            return bytesToHex(hash);
-        }
+        return calculateSM3Hash(data);
     }
 
     /**
@@ -78,18 +97,6 @@ public class SM3_Encryption {
         byte[] salt = new byte[8];
         new Random().nextBytes(salt);
         return salt;
-    }
-
-    /**
-     * 拼接原始数据和盐值
-     * @param data 原始数据
-     * @param salt 盐值
-     * @return 拼接后的数据
-     */
-    private static byte[] concatBytes(byte[] data, byte[] salt) {
-        byte[] result = Arrays.copyOf(data, data.length + salt.length);
-        System.arraycopy(salt, 0, result, data.length, salt.length);
-        return result;
     }
 
     /**

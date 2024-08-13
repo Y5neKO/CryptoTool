@@ -1,7 +1,9 @@
 package com.y5neko;
 
 import com.sun.istack.internal.NotNull;
+import com.y5neko.decrypt.SM4_Decryption;
 import com.y5neko.encrypt.SM3_Encryption;
+import com.y5neko.encrypt.SM4_Encryption;
 import com.y5neko.tools.Tools;
 import com.y5neko.ui.AboutStage;
 import javafx.application.Application;
@@ -33,11 +35,13 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import org.scenicview.ScenicView;
+import org.bouncycastle.util.encoders.Hex;
 
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.image.BufferedImage;
+import java.util.Arrays;
+import java.util.Base64;
 
 public class Main extends Application {
     private MenuBar menuBar;
@@ -101,14 +105,6 @@ public class Main extends Application {
             e.consume();
             minimizeToTray(primaryStage);
         });
-//        buttonMax.setOnAction(e -> {
-//            e.consume();
-//            if (!primaryStage.isMaximized()) {
-//                primaryStage.setMaximized(true);
-//            } else {
-//                primaryStage.setMaximized(false);
-//            }
-//        });
         buttonBox.setAlignment(Pos.CENTER_RIGHT);
         buttonBox.getChildren().addAll(buttonClose, buttonMax, buttonMin);
         gridPaneToolBar.add(buttonBox, 2, 0, 1, 1);GridPane.setHalignment(buttonBox, HPos.RIGHT);GridPane.setValignment(buttonBox, VPos.CENTER);
@@ -180,44 +176,34 @@ public class Main extends Application {
         HBox.setHgrow(one, Priority.ALWAYS);
 
         // ----------第二层原始数据----------
-        TextArea plainTextArea = new TextArea();
-        plainTextArea.setPromptText("请输入原始数据");
+        TextArea inputTextArea = new TextArea();
+        inputTextArea.setPromptText("请输入明文/密文");
 
         HBox two = new HBox();
-        two.getChildren().add(plainTextArea);
+        two.getChildren().add(inputTextArea);
         two.setPadding(new Insets(0, 0, 10, 0));
 
-        HBox.setHgrow(plainTextArea, Priority.ALWAYS);
+        HBox.setHgrow(inputTextArea, Priority.ALWAYS);
         HBox.setHgrow(two, Priority.ALWAYS);
         VBox.setVgrow(two, Priority.ALWAYS);
 
         // ----------第三层加密按钮----------
-        Button encryptButton = new Button("加密 ↓");
-        Button decryptButton = new Button("解密 ↑");
+        Button encryptButton = new Button(" 加密 ");
+        Button decryptButton = new Button(" 解密 ");
         // ----------------------------------------------------------------------
-        Label modeLabel = new Label("模式: ");
-        ObservableList<String> mode = FXCollections.observableArrayList("CBC", "ECB", "CFB", "OFB", "CTR", "CBC/NoPadding", "ECB/NoPadding");
-        ComboBox<String> modeComboBox = new ComboBox<>(mode);
-        modeComboBox.getSelectionModel().selectFirst();
+        Label inputDataTypeLabel = new Label("输入数据格式: ");
+        ObservableList<String> inputDataType = FXCollections.observableArrayList("Hex", "Base64", "UTF-8", "Hexdump");
+        ComboBox<String> inputDataTypeComboBox = new ComboBox<>(inputDataType);
+        inputDataTypeComboBox.getSelectionModel().select(2);
         // ----------------------------------------------------------------------
-        Label saltLabel = new Label("盐值: ");
-        TextField saltTextField = new TextField();
-        saltTextField.setPromptText("请输入盐值(非必须)");
-        saltTextField.setPrefWidth(200);
-        // ----------------------------------------------------------------------
-        Label inputTypeLabel = new Label("输入格式: ");
-        ObservableList<String> inputType = FXCollections.observableArrayList("Hex", "Base64", "UTF-8");
-        ComboBox<String> inputTypeComboBox = new ComboBox<>(inputType);
-        inputTypeComboBox.getSelectionModel().selectFirst();
-        // ----------------------------------------------------------------------
-        Label outputTypeLabel = new Label("输出格式: ");
-        ObservableList<String> outputType = FXCollections.observableArrayList("Hex", "Base64", "UTF-8");
-        ComboBox<String> outputTypeComboBox = new ComboBox<>(outputType);
-        outputTypeComboBox.getSelectionModel().selectFirst();
+        Label outputDataTypeLabel = new Label("输出数据格式: ");
+        ObservableList<String> outputDataType = FXCollections.observableArrayList("Hex", "Base64", "UTF-8", "Hexdump");
+        ComboBox<String> outputDataTypeComboBox = new ComboBox<>(outputDataType);
+        outputDataTypeComboBox.getSelectionModel().selectFirst();
         // ----------------------------------------------------------------------
 
         HBox three = new HBox();
-        three.getChildren().addAll(modeLabel, modeComboBox, saltLabel, saltTextField, inputTypeLabel, inputTypeComboBox, outputTypeLabel, outputTypeComboBox, encryptButton, decryptButton);
+        three.getChildren().addAll(inputDataTypeLabel, inputDataTypeComboBox, outputDataTypeLabel, outputDataTypeComboBox, encryptButton, decryptButton);
         three.setAlignment(Pos.CENTER);
         three.setSpacing(10);
         three.setPadding(new Insets(0, 0, 10, 0));
@@ -225,17 +211,52 @@ public class Main extends Application {
         HBox.setHgrow(three, Priority.ALWAYS);
 
         // ----------第四层加密结果----------
-        TextArea cipherTextArea = new TextArea();
-        cipherTextArea.setPromptText("请输入加密数据");
+        TextArea outputTextArea = new TextArea();
+        outputTextArea.editableProperty().set(false);
 
         HBox four = new HBox();
-        four.getChildren().add(cipherTextArea);
+        four.getChildren().add(outputTextArea);
         four.setPadding(new Insets(0, 0, 10, 0));
 
-        HBox.setHgrow(cipherTextArea, Priority.ALWAYS);
+        HBox.setHgrow(outputTextArea, Priority.ALWAYS);
         VBox.setVgrow(four, Priority.ALWAYS);
 
-        centerBox.getChildren().addAll(one, two, three, four);
+        // ----------第五层其他设置----------
+        Label modeLabel = new Label("模式: ");
+        ObservableList<String> mode = FXCollections.observableArrayList("CBC", "ECB", "CFB", "OFB", "CTR");
+        ComboBox<String> modeComboBox = new ComboBox<>(mode);
+        modeComboBox.getSelectionModel().selectFirst();
+        // ----------------------------------------------------------------------
+        Label paddingLabel = new Label("填充: ");
+        ObservableList<String> padding = FXCollections.observableArrayList("PKCS7Padding", "ZeroPadding", "ISO10126d2Padding", "ANSIX923Padding");
+        ComboBox<String> paddingComboBox = new ComboBox<>(padding);
+        paddingComboBox.getSelectionModel().selectFirst();
+        // ----------------------------------------------------------------------
+        Label blockSizeLabel = new Label("块大小: ");
+        TextField blockSizeTextField = new TextField();
+        blockSizeTextField.setPromptText("请输入块大小(仅OFB、CFB)");
+        blockSizeTextField.setPrefWidth(300);
+        // ----------------------------------------------------------------------
+        Label saltLabel = new Label("盐值: ");
+        TextField saltTextField = new TextField();
+        saltTextField.setPromptText("请输入盐值(非必须)");
+        HBox.setHgrow(saltTextField, Priority.ALWAYS);
+        saltTextField.setPrefWidth(200);
+        // ----------------------------------------------------------------------
+        Label saltTypeLabel = new Label("盐值类型: ");
+        ObservableList<String> saltType = FXCollections.observableArrayList("Hex", "Base64", "UTF-8");
+        ComboBox<String> saltTypeComboBox = new ComboBox<>(saltType);
+        saltTypeComboBox.getSelectionModel().selectFirst();
+        // ----------------------------------------------------------------------
+
+        HBox five = new HBox();
+        five.getChildren().addAll(modeLabel, modeComboBox, paddingLabel, paddingComboBox, blockSizeLabel, blockSizeTextField, saltLabel, saltTextField, saltTypeLabel, saltTypeComboBox);
+        five.setAlignment(Pos.CENTER);
+        five.setSpacing(10);
+        five.setPadding(new Insets(0, 0, 10, 0));
+
+        // 最后手动排序所有层数
+        centerBox.getChildren().addAll(one, five, two, three, four);
         // =============================================================Step 3: 创建一个底部栏=============================================================
 
         root.setCenter(centerBox);
@@ -279,7 +300,6 @@ public class Main extends Application {
 
         // =============================================================Step 6: 处理监听事件=============================================================
         // disable初始化
-
         cryptoTypeComboBox.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue.equals("SM3")){
                 setDisableFalse(centerBox);
@@ -288,37 +308,165 @@ public class Main extends Application {
                 keyTextField.setDisable(true);
                 ivTextField.setDisable(true);
                 decryptButton.setDisable(true);
+                modeComboBox.setDisable(true);
+                paddingComboBox.setDisable(true);
             } else if (newValue.equals("SM4")){
                 setDisableFalse(centerBox);
                 saltTextField.setDisable(true);
             }
         });
 
-        // 加密按钮
+        // 加密按钮逻辑
         encryptButton.setOnAction(event -> {
+            byte[] encrypted_data;
             // 获取待加密的原始数据
-            String data = plainTextArea.getText();
+            String decrypted_data = inputTextArea.getText();
             // 获取加密类型
             String cryptoType1 = cryptoTypeComboBox.getSelectionModel().getSelectedItem();
             // 获取盐值
-            String salt = saltTextField.getText();
+            String salt1 = saltTextField.getText();
+            // 获取盐值类型
+            String saltType1 = saltTypeComboBox.getSelectionModel().getSelectedItem();
             // 获取密钥
-            String key = keyTextField.getText();
+            String key1 = keyTextField.getText();
             // 获取密钥类型
             String keyType1 = keyTypeComboBox.getSelectionModel().getSelectedItem();
             // 获取IV
-            String iv = ivTextField.getText();
+            String iv1 = ivTextField.getText();
             // 获取IV类型
             String ivType1 = ivTypeComboBox.getSelectionModel().getSelectedItem();
             // 获取模式
             String mode1 = modeComboBox.getSelectionModel().getSelectedItem();
             // 获取输入格式
-            String inputType1 = inputTypeComboBox.getSelectionModel().getSelectedItem();
+            String decryptedDataType1 = inputDataTypeComboBox.getSelectionModel().getSelectedItem();
             // 获取输出格式
-            String outputType1 = outputTypeComboBox.getSelectionModel().getSelectedItem();
-            if (cryptoType1.equals("SM3")){
-                String encrypted_data = SM3_Encryption.sm3Encrypt(data, salt.getBytes(), null);
-                cipherTextArea.setText(encrypted_data);
+            String encryptedDataType1 = outputDataTypeComboBox.getSelectionModel().getSelectedItem();
+            // 获取填充方式
+            String padding1 = paddingComboBox.getSelectionModel().getSelectedItem();
+            // 获取块大小
+            String blockSize1 = blockSizeTextField.getText();
+            try {
+                // 排除null
+                if (cryptoType1 == null) {
+                    cryptoType1 = "";
+                }
+                // 判断加密过程
+                if (cryptoType1.equals("SM3")) {
+                    encrypted_data = SM3_Encryption.sm3Encrypt(decrypted_data, decryptedDataType1, salt1, saltType1);
+                }
+                else if (cryptoType1.equals("SM4")){
+                    encrypted_data = SM4_Encryption.sm4Encrypt(decrypted_data, decryptedDataType1, salt1, saltType1, key1, keyType1, mode1, padding1, blockSize1, iv1, ivType1);
+                }
+                else {
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setTitle("错误");
+                    alert.setHeaderText("未选择加密方式");
+                    alert.setContentText("请选择加密方式");
+                    alert.showAndWait();
+                    return;
+                }
+                // 输出格式
+                switch (encryptedDataType1) {
+                    case "Hex":
+                        outputTextArea.setText(Hex.toHexString(encrypted_data));
+                        break;
+                    case "Base64":
+                        outputTextArea.setText(Base64.getEncoder().encodeToString(encrypted_data));
+                        break;
+                    case "UTF-8":
+                        outputTextArea.setText(new String(encrypted_data));
+                        break;
+                    case "Hexdump":
+                        outputTextArea.setText(Tools.toHexDump(encrypted_data));
+                        break;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setTitle("错误");
+                alert.setHeaderText("加密失败, 原因如下: ");
+                alert.setContentText(e.getMessage());
+                alert.showAndWait();
+            }
+        });
+
+        decryptButton.setOnAction(event -> {
+            byte[] decrypted_data;
+            // 获取加密的原始数据
+            String encrypted_data = inputTextArea.getText();
+            // 获取加密类型
+            String cryptoType1 = cryptoTypeComboBox.getSelectionModel().getSelectedItem();
+            // 获取盐值
+            String salt1 = saltTextField.getText();
+            // 获取盐值类型
+            String saltType1 = saltTypeComboBox.getSelectionModel().getSelectedItem();
+            // 获取密钥
+            String key1 = keyTextField.getText();
+            // 获取密钥类型
+            String keyType1 = keyTypeComboBox.getSelectionModel().getSelectedItem();
+            // 获取IV
+            String iv1 = ivTextField.getText();
+            // 获取IV类型
+            String ivType1 = ivTypeComboBox.getSelectionModel().getSelectedItem();
+            // 获取模式
+            String mode1 = modeComboBox.getSelectionModel().getSelectedItem();
+            // 获取输入格式
+            String inputDataType1 = inputDataTypeComboBox.getSelectionModel().getSelectedItem();
+            // 获取输出格式
+            String outputDataType1 = outputDataTypeComboBox.getSelectionModel().getSelectedItem();
+            // 获取填充方式
+            String padding1 = paddingComboBox.getSelectionModel().getSelectedItem();
+            // 获取块大小
+            String blockSize1 = blockSizeTextField.getText();
+            // 未输入数据的情况
+            if (encrypted_data.isEmpty()) {
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setTitle("ERROR");
+                alert.setHeaderText("解密失败, 原因如下: ");
+                alert.setContentText("请输入密文!");
+                alert.showAndWait();
+                return;
+            }
+            System.out.println(encrypted_data);
+            try {
+                // 排除null
+                if (cryptoType1 == null) {
+                    cryptoType1 = "";
+                }
+                // 判断加密过程
+                if (cryptoType1.equals("SM4")){
+                    decrypted_data = SM4_Decryption.sm4Decrypt(encrypted_data, inputDataType1, salt1, saltType1, key1, keyType1, mode1, padding1, blockSize1, iv1, ivType1);
+                }
+                else {
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setTitle("错误");
+                    alert.setHeaderText("未选择解密方式");
+                    alert.setContentText("请选择解密方式");
+                    alert.showAndWait();
+                    return;
+                }
+                // 输出格式
+                switch (outputDataType1) {
+                    case "Hex":
+                        outputTextArea.setText(Arrays.toString(decrypted_data));
+                        break;
+                    case "Base64":
+                        outputTextArea.setText(Base64.getEncoder().encodeToString(decrypted_data));
+                        break;
+                    case "UTF-8":
+                        outputTextArea.setText(new String(decrypted_data));
+                        break;
+                    case "Hexdump":
+                        outputTextArea.setText(Tools.toHexDump(decrypted_data));
+                        break;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setTitle("错误");
+                alert.setHeaderText("解密失败, 原因如下: ");
+                alert.setContentText(e.getMessage());
+                alert.showAndWait();
             }
         });
     }
@@ -333,18 +481,21 @@ public class Main extends Application {
         Menu settingMenu = new Menu("设置");
         Menu helpMenu = new Menu("帮助");
         menuBar.getMenus().addAll(settingMenu, helpMenu);
-
-        MenuItem settingProxy = new MenuItem("主题设置");
+        // ----------第一个按钮----------
+        MenuItem settingProxy = new MenuItem("主题设置(暂不支持)");
         settingMenu.getItems().addAll(settingProxy);
         settingProxy.setOnAction(event -> System.out.println("主题设置"));
-
+        // ----------第二个按钮----------
         MenuItem about = new MenuItem("关于");
         helpMenu.getItems().addAll(about);
         about.setOnAction(event -> new AboutStage());
-
-        MenuItem checkUpdate = new MenuItem("检查更新");
-        helpMenu.getItems().add(checkUpdate);
-        checkUpdate.setOnAction(event -> System.out.println("检查更新"));
+        // ----------第三个按钮----------
+//        MenuItem checkUpdate = new MenuItem("检查更新");
+//        helpMenu.getItems().add(checkUpdate);
+//        checkUpdate.setOnAction(event -> System.out.println("检查更新"));
+        // ----------第四个按钮----------
+        MenuItem plugins = new MenuItem("插件(暂不支持)");
+        settingMenu.getItems().add(plugins);
     }
 
     /**

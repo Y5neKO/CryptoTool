@@ -1,0 +1,10 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="CryptoTool:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/CryptoTool_jar</output-path>
+    <root id="archive" name="CryptoTool.jar">
+      <element id="module-output" name="CryptoTool" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/bouncycastle/bcprov-jdk15on/1.70/bcprov-jdk15on-1.70.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/cn/hutool/hutool-all/5.7.13/hutool-all-5.7.13.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>
