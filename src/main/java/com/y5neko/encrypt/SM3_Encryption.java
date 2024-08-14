@@ -10,34 +10,6 @@ import java.util.Base64;
 import java.util.Random;
 
 public class SM3_Encryption {
-    public static void main(String[] args) {
-//        Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
-//
-//        // 原始数据
-//        byte[] data = "Hello, world!".getBytes();
-//
-//        // 生成随机盐值
-//        byte[] salt = generateSalt();
-//        System.out.println(Arrays.toString(salt));
-//
-//        // 拼接原始数据和盐值
-//        byte[] dataWithSalt = concatBytes(data, salt);
-//
-//        // 计算SM3哈希值
-//        byte[] hash = calculateSM3Hash(dataWithSalt);
-//
-//        // 转换为16进制字符串
-//        String hashHex = bytesToHex(hash);
-//        String saltHex = bytesToHex(salt);
-//        String hashBase64 = sm3Encrypt("Hello, world!", null, "base64");
-//
-//        // 输出结果
-//        System.out.println("Salt: " + saltHex);
-//        System.out.println("Hash: " + hashHex);
-//        System.out.println("Base64 hash: " + hashBase64);
-//        System.out.println("Base64 hash length: " + hashBase64.length());
-    }
-
     /**
      * SM3加密公共接口
      * @param paramData 原始数据

@@ -7,10 +7,7 @@ import com.y5neko.asset.NavicatInit;
 import com.y5neko.decrypt.AES_Decryption;
 import com.y5neko.decrypt.DES_Decryption;
 import com.y5neko.decrypt.SM4_Decryption;
-import com.y5neko.encrypt.AES_Encryption;
-import com.y5neko.encrypt.DES_Encryption;
-import com.y5neko.encrypt.SM3_Encryption;
-import com.y5neko.encrypt.SM4_Encryption;
+import com.y5neko.encrypt.*;
 import com.y5neko.tools.Tools;
 import com.y5neko.ui.AboutStage;
 import javafx.application.Application;
@@ -51,6 +48,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.file.Files;
+import java.util.Arrays;
 import java.util.Base64;
 
 public class Main extends Application {
@@ -151,7 +149,7 @@ public class Main extends Application {
 
         // ----------第一层加密方式和密钥----------
         Label cryptoTypeLabel = new Label("加密类型: ");
-        ObservableList<String> cryptoType = FXCollections.observableArrayList("SM3", "SM4", "AES", "DES", "Finalshell", "Navicat11", "Navicat12+", "致远数据库");
+        ObservableList<String> cryptoType = FXCollections.observableArrayList("MD5", "NTLM Hash", "SM3", "SM4", "AES", "DES", "Finalshell", "Navicat11", "Navicat12+", "致远数据库");
         ComboBox<String> cryptoTypeComboBox = new ComboBox<>(cryptoType);
 //        cryptoTypeComboBox.getSelectionModel().select(0);
         // ----------------------------------------------------------------------
@@ -324,80 +322,117 @@ public class Main extends Application {
         // =============================================================Step 6: 处理监听事件=============================================================
         // disable初始化
         cryptoTypeComboBox.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue.equals("SM3")){
-                setDisableFalse(centerBox);
-                keyTypeComboBox.setDisable(true);
-                ivTypeComboBox.setDisable(true);
-                keyTextField.setDisable(true);
-                ivTextField.setDisable(true);
-                decryptButton.setDisable(true);
-                modeComboBox.setDisable(true);
-                paddingComboBox.setDisable(true);
-                blockSizeTextField.setDisable(true);
-                macLenTextField.setDisable(true);
-                inputTextArea.setPromptText("SM3是中华人民共和国政府采用的一种密码散列函数标准，由国家密码管理局于2010年12月17日发布。相关标准为“GM/T 0004-2012 《SM3密码杂凑算法》”。在商用密码体系中，SM3主要用于数字签名及验证、消息认证码生成及验证、随机数生成等，其算法公开。据国家密码管理局表示，其安全性及效率与SHA-256相当。");
-            } else if (newValue.equals("SM4")){
-                setDisableFalse(centerBox);
-                saltTextField.setDisable(true);
-                inputTextArea.setPromptText("SM4.0（原名SMS4.0）由国家密码管理局于2012年3月21日发布。相关标准为 GM/T 0002-2012《SM4分组密码算法》（原SMS4分组密码算法）。分组长度与密钥长度均为128bit（即16Byte）。");
-            } else if (newValue.equals("AES")) {
-                setDisableFalse(centerBox);
-                inputTextArea.setPromptText("密码学中的高级加密标准（Advanced Encryption Standard，AES），又称Rijndael加密法，是美国联邦政府采用的一种区块加密标准,采用对称分组密码体制，密钥长度支持为128/192/256bits。");
-            } else if (newValue.equals("DES")) {
-                setDisableFalse(centerBox);
-                macLenTextField.setDisable(true);
-                inputTextArea.setPromptText("DES全称为Data Encryption Standard，即数据加密标准，是一种使用密钥加密的块算法。支持3DES双倍和三倍的密钥。密钥长度分别为支持为128/192位。");
-            } else if (newValue.equals("Finalshell")) {
-                setDisableFalse(centerBox);
-                keyTextField.setDisable(true);
-                ivTextField.setDisable(true);
-                keyTypeComboBox.setDisable(true);
-                ivTypeComboBox.setDisable(true);
-                modeComboBox.setDisable(true);
-                paddingComboBox.setDisable(true);
-                macLenTextField.setDisable(true);
-                blockSizeTextField.setDisable(true);
-                saltTextField.setDisable(true);
-                saltTypeComboBox.setDisable(true);
-                inputDataTypeComboBox.setDisable(true);
-                outputDataTypeComboBox.setDisable(true);
-                inputDataTypeComboBox.getSelectionModel().select("UTF-8");
-                outputDataTypeComboBox.getSelectionModel().select("UTF-8");
-                inputTextArea.setPromptText("支持Finalshell加解密");
-            } else if (newValue.equals("Navicat11") || newValue.equals("Navicat12+")) {
-                setDisableFalse(centerBox);
-                keyTextField.setDisable(true);
-                ivTextField.setDisable(true);
-                keyTypeComboBox.setDisable(true);
-                ivTypeComboBox.setDisable(true);
-                modeComboBox.setDisable(true);
-                paddingComboBox.setDisable(true);
-                macLenTextField.setDisable(true);
-                blockSizeTextField.setDisable(true);
-                saltTextField.setDisable(true);
-                saltTypeComboBox.setDisable(true);
-                inputDataTypeComboBox.setDisable(true);
-                outputDataTypeComboBox.setDisable(true);
-                inputDataTypeComboBox.getSelectionModel().select("UTF-8");
-                outputDataTypeComboBox.getSelectionModel().select("UTF-8");
-                inputTextArea.setPromptText("支持Navicat11/12+加解密");
-            } else if (newValue.equals("致远数据库")) {
-                setDisableFalse(centerBox);
-                keyTextField.setDisable(true);
-                ivTextField.setDisable(true);
-                keyTypeComboBox.setDisable(true);
-                ivTypeComboBox.setDisable(true);
-                modeComboBox.setDisable(true);
-                paddingComboBox.setDisable(true);
-                macLenTextField.setDisable(true);
-                blockSizeTextField.setDisable(true);
-                saltTextField.setDisable(true);
-                saltTypeComboBox.setDisable(true);
-                inputDataTypeComboBox.setDisable(true);
-                outputDataTypeComboBox.setDisable(true);
-                inputDataTypeComboBox.getSelectionModel().select("UTF-8");
-                outputDataTypeComboBox.getSelectionModel().select("UTF-8");
-                inputTextArea.setPromptText("致远数据库加解密");
+            switch (newValue) {
+                case "MD5":
+                    setDisableFalse(centerBox);
+                    keyTypeComboBox.setDisable(true);
+                    ivTypeComboBox.setDisable(true);
+                    keyTextField.setDisable(true);
+                    ivTextField.setDisable(true);
+                    decryptButton.setDisable(true);
+                    modeComboBox.setDisable(true);
+                    paddingComboBox.setDisable(true);
+                    blockSizeTextField.setDisable(true);
+                    macLenTextField.setDisable(true);
+                    inputTextArea.setPromptText("MD5信息摘要算法（英语：MD5 Message-Digest Algorithm），一种被广泛使用的密码散列函数，可以产生出一个128位（16字节）的散列值（hash value），用于确保信息传输完整一致。");
+                    break;
+                case "NTLM Hash":
+                    setDisableFalse(centerBox);
+                    keyTypeComboBox.setDisable(true);
+                    ivTypeComboBox.setDisable(true);
+                    keyTextField.setDisable(true);
+                    ivTextField.setDisable(true);
+                    decryptButton.setDisable(true);
+                    modeComboBox.setDisable(true);
+                    paddingComboBox.setDisable(true);
+                    blockSizeTextField.setDisable(true);
+                    macLenTextField.setDisable(true);
+                    saltTextField.setDisable(true);
+                    saltTypeComboBox.setDisable(true);
+                    inputTextArea.setPromptText("NTLMv1 加密通常用于生成 NTLM 哈希值，尤其是在处理 Windows 网络身份验证时。NTLMv1 的核心是对密码进行 Unicode 编码，然后使用 MD4 哈希算法计算哈希值。");
+                    break;
+                case "SM3":
+                    setDisableFalse(centerBox);
+                    keyTypeComboBox.setDisable(true);
+                    ivTypeComboBox.setDisable(true);
+                    keyTextField.setDisable(true);
+                    ivTextField.setDisable(true);
+                    decryptButton.setDisable(true);
+                    modeComboBox.setDisable(true);
+                    paddingComboBox.setDisable(true);
+                    blockSizeTextField.setDisable(true);
+                    macLenTextField.setDisable(true);
+                    inputTextArea.setPromptText("SM3是中华人民共和国政府采用的一种密码散列函数标准，由国家密码管理局于2010年12月17日发布。相关标准为“GM/T 0004-2012 《SM3密码杂凑算法》”。在商用密码体系中，SM3主要用于数字签名及验证、消息认证码生成及验证、随机数生成等，其算法公开。据国家密码管理局表示，其安全性及效率与SHA-256相当。");
+                    break;
+                case "SM4":
+                    setDisableFalse(centerBox);
+                    saltTextField.setDisable(true);
+                    inputTextArea.setPromptText("SM4.0（原名SMS4.0）由国家密码管理局于2012年3月21日发布。相关标准为 GM/T 0002-2012《SM4分组密码算法》（原SMS4分组密码算法）。分组长度与密钥长度均为128bit（即16Byte）。");
+                    break;
+                case "AES":
+                    setDisableFalse(centerBox);
+                    inputTextArea.setPromptText("密码学中的高级加密标准（Advanced Encryption Standard，AES），又称Rijndael加密法，是美国联邦政府采用的一种区块加密标准,采用对称分组密码体制，密钥长度支持为128/192/256bits。");
+                    break;
+                case "DES":
+                    setDisableFalse(centerBox);
+                    macLenTextField.setDisable(true);
+                    inputTextArea.setPromptText("DES全称为Data Encryption Standard，即数据加密标准，是一种使用密钥加密的块算法。支持3DES双倍和三倍的密钥。密钥长度分别为支持为128/192位。");
+                    break;
+                case "Finalshell":
+                    setDisableFalse(centerBox);
+                    keyTextField.setDisable(true);
+                    ivTextField.setDisable(true);
+                    keyTypeComboBox.setDisable(true);
+                    ivTypeComboBox.setDisable(true);
+                    modeComboBox.setDisable(true);
+                    paddingComboBox.setDisable(true);
+                    macLenTextField.setDisable(true);
+                    blockSizeTextField.setDisable(true);
+                    saltTextField.setDisable(true);
+                    saltTypeComboBox.setDisable(true);
+                    inputDataTypeComboBox.setDisable(true);
+                    outputDataTypeComboBox.setDisable(true);
+                    inputDataTypeComboBox.getSelectionModel().select("UTF-8");
+                    outputDataTypeComboBox.getSelectionModel().select("UTF-8");
+                    inputTextArea.setPromptText("支持Finalshell加解密");
+                    break;
+                case "Navicat11":
+                case "Navicat12+":
+                    setDisableFalse(centerBox);
+                    keyTextField.setDisable(true);
+                    ivTextField.setDisable(true);
+                    keyTypeComboBox.setDisable(true);
+                    ivTypeComboBox.setDisable(true);
+                    modeComboBox.setDisable(true);
+                    paddingComboBox.setDisable(true);
+                    macLenTextField.setDisable(true);
+                    blockSizeTextField.setDisable(true);
+                    saltTextField.setDisable(true);
+                    saltTypeComboBox.setDisable(true);
+                    inputDataTypeComboBox.setDisable(true);
+                    outputDataTypeComboBox.setDisable(true);
+                    inputDataTypeComboBox.getSelectionModel().select("UTF-8");
+                    outputDataTypeComboBox.getSelectionModel().select("UTF-8");
+                    inputTextArea.setPromptText("支持Navicat11/12+加解密");
+                    break;
+                case "致远数据库":
+                    setDisableFalse(centerBox);
+                    keyTextField.setDisable(true);
+                    ivTextField.setDisable(true);
+                    keyTypeComboBox.setDisable(true);
+                    ivTypeComboBox.setDisable(true);
+                    modeComboBox.setDisable(true);
+                    paddingComboBox.setDisable(true);
+                    macLenTextField.setDisable(true);
+                    blockSizeTextField.setDisable(true);
+                    saltTextField.setDisable(true);
+                    saltTypeComboBox.setDisable(true);
+                    inputDataTypeComboBox.setDisable(true);
+                    outputDataTypeComboBox.setDisable(true);
+                    inputDataTypeComboBox.getSelectionModel().select("UTF-8");
+                    outputDataTypeComboBox.getSelectionModel().select("UTF-8");
+                    inputTextArea.setPromptText("致远数据库加解密");
+                    break;
             }
         });
 
@@ -437,53 +472,67 @@ public class Main extends Application {
                 if (cryptoType1 == null) {
                     cryptoType1 = "";
                 }
+                System.out.println(cryptoType1);
                 // 判断加密过程
-                if (cryptoType1.equals("SM3")) {
-                    encrypted_data = SM3_Encryption.sm3Encrypt(decrypted_data, decryptedDataType1, salt1, saltType1);
-                }
-                else if (cryptoType1.equals("SM4")){
-                    encrypted_data = SM4_Encryption.sm4Encrypt(decrypted_data, decryptedDataType1, salt1, saltType1, key1, keyType1, mode1, padding1, blockSize1, iv1, ivType1);
-                }
-                else if (cryptoType1.equals("AES")) {
-                    encrypted_data = AES_Encryption.aesEncrypt(decrypted_data, decryptedDataType1, salt1, saltType1, key1, keyType1, mode1, padding1, blockSize1, iv1, ivType1, macLen1);
-                }
-                else if (cryptoType1.equals("DES")){
-                    encrypted_data = DES_Encryption.desEncrypt(decrypted_data, decryptedDataType1, salt1, saltType1, key1, keyType1, mode1, padding1, blockSize1, iv1, ivType1);
-                }
-                else if (cryptoType1.equals("Finalshell")) {
-                    encrypted_data = FinalshellInit.encodePass(decrypted_data).getBytes();
-                }
-                else if (cryptoType1.equals("Navicat11")) {
-                    NavicatInit navicat = new NavicatInit(11);
-                    encrypted_data = navicat.encrypt(decrypted_data).getBytes();
-                }
-                else if (cryptoType1.equals("Navicat12+")) {
-                    NavicatInit navicat = new NavicatInit(12);
-                    encrypted_data = navicat.encrypt(decrypted_data).getBytes();
-                } else if (cryptoType1.equals("致远数据库")) {
-                    encrypted_data = TextEncoder.encode(decrypted_data).getBytes();
-                } else {
-                    Alert alert = new Alert(Alert.AlertType.ERROR);
-                    alert.setTitle("错误");
-                    alert.setHeaderText("未选择加密方式");
-                    alert.setContentText("请选择加密方式");
-                    alert.showAndWait();
-                    return;
+                switch (cryptoType1) {
+                    case "MD5":
+                        encrypted_data = MD5_Encryption.md5Encrypt(decrypted_data, decryptedDataType1, salt1, saltType1);
+                        break;
+                    case "NTLM Hash":
+                        encrypted_data = NTLM_Encryption.ntlmv1Hash(decrypted_data);
+                        break;
+                    case "SM3":
+                        encrypted_data = SM3_Encryption.sm3Encrypt(decrypted_data, decryptedDataType1, salt1, saltType1);
+                        break;
+                    case "SM4":
+                        encrypted_data = SM4_Encryption.sm4Encrypt(decrypted_data, decryptedDataType1, salt1, saltType1, key1, keyType1, mode1, padding1, blockSize1, iv1, ivType1);
+                        break;
+                    case "AES":
+                        encrypted_data = AES_Encryption.aesEncrypt(decrypted_data, decryptedDataType1, salt1, saltType1, key1, keyType1, mode1, padding1, blockSize1, iv1, ivType1, macLen1);
+                        break;
+                    case "DES":
+                        encrypted_data = DES_Encryption.desEncrypt(decrypted_data, decryptedDataType1, salt1, saltType1, key1, keyType1, mode1, padding1, blockSize1, iv1, ivType1);
+                        break;
+                    case "Finalshell":
+                        encrypted_data = FinalshellInit.encodePass(decrypted_data).getBytes();
+                        break;
+                    case "Navicat11": {
+                        NavicatInit navicat = new NavicatInit(11);
+                        encrypted_data = navicat.encrypt(decrypted_data).getBytes();
+                        break;
+                    }
+                    case "Navicat12+": {
+                        NavicatInit navicat = new NavicatInit(12);
+                        encrypted_data = navicat.encrypt(decrypted_data).getBytes();
+                        break;
+                    }
+                    case "致远数据库":
+                        encrypted_data = TextEncoder.encode(decrypted_data).getBytes();
+                        break;
+                    default:
+                        Alert alert = new Alert(Alert.AlertType.ERROR);
+                        alert.setTitle("错误");
+                        alert.setHeaderText("未选择加密方式");
+                        alert.setContentText("请选择加密方式");
+                        alert.showAndWait();
+                        return;
                 }
                 // 输出格式
-                switch (encryptedDataType1) {
-                    case "Hex":
-                        outputTextArea.setText(Hex.toHexString(encrypted_data));
-                        break;
-                    case "Base64":
-                        outputTextArea.setText(Base64.getEncoder().encodeToString(encrypted_data));
-                        break;
-                    case "UTF-8":
-                        outputTextArea.setText(new String(encrypted_data));
-                        break;
-                    case "Hexdump":
-                        outputTextArea.setText(Tools.toHexDump(encrypted_data));
-                        break;
+                if (encrypted_data != null){
+                    switch (encryptedDataType1) {
+                        case "Hex":
+                            outputTextArea.setText(Hex.toHexString(encrypted_data));
+                            break;
+                        case "Base64":
+                            outputTextArea.setText(Base64.getEncoder().encodeToString(encrypted_data));
+                            break;
+                        case "UTF-8":
+                            outputTextArea.setText(new String(encrypted_data));
+                            break;
+                        case "Hexdump":
+                            outputTextArea.setText(Tools.toHexDump(encrypted_data));
+                            break;
+                    }
                 }
                 exportData = encrypted_data;
             } catch (Exception e) {
@@ -543,50 +592,56 @@ public class Main extends Application {
                     cryptoType1 = "";
                 }
                 // 判断加密过程
-                if (cryptoType1.equals("SM4")){
-                    decrypted_data = SM4_Decryption.sm4Decrypt(encrypted_data, inputDataType1, salt1, saltType1, key1, keyType1, mode1, padding1, blockSize1, iv1, ivType1);
-                }
-                else if (cryptoType1.equals("AES")) {
-                    decrypted_data = AES_Decryption.aesDecrypt(encrypted_data, inputDataType1, salt1, saltType1, key1, keyType1, mode1, padding1, blockSize1, iv1, ivType1, macLen1);
-                }
-                else if (cryptoType1.equals("DES")) {
-                    decrypted_data = DES_Decryption.desDecrypt(encrypted_data, inputDataType1, salt1, saltType1, key1, keyType1, mode1, padding1, blockSize1, iv1, ivType1);
-                }
-                else if (cryptoType1.equals("Finalshell")) {
-                    decrypted_data = FinalshellInit.decodePass(encrypted_data).getBytes();
-                }
-                else if (cryptoType1.equals("Navicat11")) {
-                    NavicatInit navicat = new NavicatInit(11);
-                    decrypted_data = navicat.decrypt(encrypted_data).getBytes();
-                }
-                else if (cryptoType1.equals("Navicat12+")) {
-                    NavicatInit navicat = new NavicatInit(12);
-                    decrypted_data = navicat.decrypt(encrypted_data).getBytes();
-                }
-                else if (cryptoType1.equals("致远数据库")) {
-                    decrypted_data = TextEncoder.decode(encrypted_data).getBytes();
-                } else {
-                    Alert alert = new Alert(Alert.AlertType.ERROR);
-                    alert.setTitle("错误");
-                    alert.setHeaderText("未选择解密方式");
-                    alert.setContentText("请选择解密方式");
-                    alert.showAndWait();
-                    return;
+                switch (cryptoType1) {
+                    case "SM4":
+                        decrypted_data = SM4_Decryption.sm4Decrypt(encrypted_data, inputDataType1, salt1, saltType1, key1, keyType1, mode1, padding1, blockSize1, iv1, ivType1);
+                        break;
+                    case "AES":
+                        decrypted_data = AES_Decryption.aesDecrypt(encrypted_data, inputDataType1, salt1, saltType1, key1, keyType1, mode1, padding1, blockSize1, iv1, ivType1, macLen1);
+                        break;
+                    case "DES":
+                        decrypted_data = DES_Decryption.desDecrypt(encrypted_data, inputDataType1, salt1, saltType1, key1, keyType1, mode1, padding1, blockSize1, iv1, ivType1);
+                        break;
+                    case "Finalshell":
+                        decrypted_data = FinalshellInit.decodePass(encrypted_data).getBytes();
+                        break;
+                    case "Navicat11": {
+                        NavicatInit navicat = new NavicatInit(11);
+                        decrypted_data = navicat.decrypt(encrypted_data).getBytes();
+                        break;
+                    }
+                    case "Navicat12+": {
+                        NavicatInit navicat = new NavicatInit(12);
+                        decrypted_data = navicat.decrypt(encrypted_data).getBytes();
+                        break;
+                    }
+                    case "致远数据库":
+                        decrypted_data = TextEncoder.decode(encrypted_data).getBytes();
+                        break;
+                    default:
+                        Alert alert = new Alert(Alert.AlertType.ERROR);
+                        alert.setTitle("错误");
+                        alert.setHeaderText("未选择解密方式");
+                        alert.setContentText("请选择解密方式");
+                        alert.showAndWait();
+                        return;
                 }
                 // 输出格式
-                switch (outputDataType1) {
-                    case "Hex":
-                        outputTextArea.setText(Hex.toHexString(decrypted_data));
-                        break;
-                    case "Base64":
-                        outputTextArea.setText(Base64.getEncoder().encodeToString(decrypted_data));
-                        break;
-                    case "UTF-8":
-                        outputTextArea.setText(new String(decrypted_data));
-                        break;
-                    case "Hexdump":
-                        outputTextArea.setText(Tools.toHexDump(decrypted_data));
-                        break;
+                if (decrypted_data != null){
+                    switch (outputDataType1) {
+                        case "Hex":
+                            outputTextArea.setText(Hex.toHexString(decrypted_data));
+                            break;
+                        case "Base64":
+                            outputTextArea.setText(Base64.getEncoder().encodeToString(decrypted_data));
+                            break;
+                        case "UTF-8":
+                            outputTextArea.setText(new String(decrypted_data));
+                            break;
+                        case "Hexdump":
+                            outputTextArea.setText(Tools.toHexDump(decrypted_data));
+                            break;
+                    }
                 }
                 exportData = decrypted_data;
             } catch (Exception e) {

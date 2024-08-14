@@ -44,9 +44,9 @@ public class AboutStage extends Stage {
         ImageView imageView = new ImageView(new Image("img/icon.png", 150, 150, true, true)); // 替换为你的图标路径
 
         // 添加标题和描述信息
-        Label titleLabel = new Label("CT v0.1");
+        Label titleLabel = new Label("CT v0.2");
         Label descriptionLabel = new Label("CryptoTool\n综合加解密工具\n\n\n\n\n");
-        Label buildInfoLabel = new Label("Build Info: 20240812");
+        Label buildInfoLabel = new Label("Build Info: 20240815");
         Label copyrightLabel = new Label("Copyright (c) 2024, Y5neKO. All rights reserved.");
         titleLabel.setTextFill(Color.WHITE);
         descriptionLabel.setTextFill(Color.WHITE);
