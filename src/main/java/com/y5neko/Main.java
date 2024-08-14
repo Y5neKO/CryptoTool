@@ -1,7 +1,14 @@
 package com.y5neko;
 
+import com.seeyon.ctp.util.TextEncoder;
 import com.sun.istack.internal.NotNull;
+import com.y5neko.asset.FinalshellInit;
+import com.y5neko.asset.NavicatInit;
+import com.y5neko.decrypt.AES_Decryption;
+import com.y5neko.decrypt.DES_Decryption;
 import com.y5neko.decrypt.SM4_Decryption;
+import com.y5neko.encrypt.AES_Encryption;
+import com.y5neko.encrypt.DES_Encryption;
 import com.y5neko.encrypt.SM3_Encryption;
 import com.y5neko.encrypt.SM4_Encryption;
 import com.y5neko.tools.Tools;
@@ -28,11 +35,13 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.Dragboard;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import org.bouncycastle.util.encoders.Hex;
@@ -40,7 +49,8 @@ import org.bouncycastle.util.encoders.Hex;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.image.BufferedImage;
-import java.util.Arrays;
+import java.io.*;
+import java.nio.file.Files;
 import java.util.Base64;
 
 public class Main extends Application {
@@ -50,6 +60,8 @@ public class Main extends Application {
 
     private double xOffset = 0;
     private double yOffset = 0;
+
+    byte[] exportData;
 
     public static void main(String[] args) {
         launch(args);
@@ -139,7 +151,7 @@ public class Main extends Application {
 
         // ----------第一层加密方式和密钥----------
         Label cryptoTypeLabel = new Label("加密类型: ");
-        ObservableList<String> cryptoType = FXCollections.observableArrayList("SM3", "SM4");
+        ObservableList<String> cryptoType = FXCollections.observableArrayList("SM3", "SM4", "AES", "DES", "Finalshell", "Navicat11", "Navicat12+", "致远数据库");
         ComboBox<String> cryptoTypeComboBox = new ComboBox<>(cryptoType);
 //        cryptoTypeComboBox.getSelectionModel().select(0);
         // ----------------------------------------------------------------------
@@ -178,6 +190,7 @@ public class Main extends Application {
         // ----------第二层原始数据----------
         TextArea inputTextArea = new TextArea();
         inputTextArea.setPromptText("请输入明文/密文");
+        inputTextArea.setWrapText(true);
 
         HBox two = new HBox();
         two.getChildren().add(inputTextArea);
@@ -190,6 +203,8 @@ public class Main extends Application {
         // ----------第三层加密按钮----------
         Button encryptButton = new Button(" 加密 ");
         Button decryptButton = new Button(" 解密 ");
+        Button uploadButton = new Button("上传文件");
+        Button exportButton = new Button("导出结果");
         // ----------------------------------------------------------------------
         Label inputDataTypeLabel = new Label("输入数据格式: ");
         ObservableList<String> inputDataType = FXCollections.observableArrayList("Hex", "Base64", "UTF-8", "Hexdump");
@@ -203,7 +218,7 @@ public class Main extends Application {
         // ----------------------------------------------------------------------
 
         HBox three = new HBox();
-        three.getChildren().addAll(inputDataTypeLabel, inputDataTypeComboBox, outputDataTypeLabel, outputDataTypeComboBox, encryptButton, decryptButton);
+        three.getChildren().addAll(uploadButton, exportButton, inputDataTypeLabel, inputDataTypeComboBox, outputDataTypeLabel, outputDataTypeComboBox, encryptButton, decryptButton);
         three.setAlignment(Pos.CENTER);
         three.setSpacing(10);
         three.setPadding(new Insets(0, 0, 10, 0));
@@ -212,7 +227,8 @@ public class Main extends Application {
 
         // ----------第四层加密结果----------
         TextArea outputTextArea = new TextArea();
-        outputTextArea.editableProperty().set(false);
+//        outputTextArea.editableProperty().set(false);
+        outputTextArea.setWrapText(true);
 
         HBox four = new HBox();
         four.getChildren().add(outputTextArea);
@@ -223,7 +239,7 @@ public class Main extends Application {
 
         // ----------第五层其他设置----------
         Label modeLabel = new Label("模式: ");
-        ObservableList<String> mode = FXCollections.observableArrayList("CBC", "ECB", "CFB", "OFB", "CTR");
+        ObservableList<String> mode = FXCollections.observableArrayList("CBC", "ECB", "CFB", "OFB", "CTR", "GCM");
         ComboBox<String> modeComboBox = new ComboBox<>(mode);
         modeComboBox.getSelectionModel().selectFirst();
         // ----------------------------------------------------------------------
@@ -232,10 +248,17 @@ public class Main extends Application {
         ComboBox<String> paddingComboBox = new ComboBox<>(padding);
         paddingComboBox.getSelectionModel().selectFirst();
         // ----------------------------------------------------------------------
+        Label macLenLabel = new Label("标签长度: ");
+        TextField macLenTextField = new TextField();
+        macLenTextField.setPromptText("128/96/64");
+        macLenTextField.setText("128");
+        macLenTextField.setPrefWidth(100);
+        // ----------------------------------------------------------------------
         Label blockSizeLabel = new Label("块大小: ");
         TextField blockSizeTextField = new TextField();
-        blockSizeTextField.setPromptText("请输入块大小(仅OFB、CFB)");
-        blockSizeTextField.setPrefWidth(300);
+        blockSizeTextField.setText("8");
+        blockSizeTextField.setPromptText("仅OFB、CFB");
+        blockSizeTextField.setPrefWidth(100);
         // ----------------------------------------------------------------------
         Label saltLabel = new Label("盐值: ");
         TextField saltTextField = new TextField();
@@ -250,7 +273,7 @@ public class Main extends Application {
         // ----------------------------------------------------------------------
 
         HBox five = new HBox();
-        five.getChildren().addAll(modeLabel, modeComboBox, paddingLabel, paddingComboBox, blockSizeLabel, blockSizeTextField, saltLabel, saltTextField, saltTypeLabel, saltTypeComboBox);
+        five.getChildren().addAll(modeLabel, modeComboBox, paddingLabel, paddingComboBox, macLenLabel, macLenTextField, blockSizeLabel, blockSizeTextField, saltLabel, saltTextField, saltTypeLabel, saltTypeComboBox);
         five.setAlignment(Pos.CENTER);
         five.setSpacing(10);
         five.setPadding(new Insets(0, 0, 10, 0));
@@ -310,9 +333,71 @@ public class Main extends Application {
                 decryptButton.setDisable(true);
                 modeComboBox.setDisable(true);
                 paddingComboBox.setDisable(true);
+                blockSizeTextField.setDisable(true);
+                macLenTextField.setDisable(true);
+                inputTextArea.setPromptText("SM3是中华人民共和国政府采用的一种密码散列函数标准，由国家密码管理局于2010年12月17日发布。相关标准为“GM/T 0004-2012 《SM3密码杂凑算法》”。在商用密码体系中，SM3主要用于数字签名及验证、消息认证码生成及验证、随机数生成等，其算法公开。据国家密码管理局表示，其安全性及效率与SHA-256相当。");
             } else if (newValue.equals("SM4")){
                 setDisableFalse(centerBox);
                 saltTextField.setDisable(true);
+                inputTextArea.setPromptText("SM4.0（原名SMS4.0）由国家密码管理局于2012年3月21日发布。相关标准为 GM/T 0002-2012《SM4分组密码算法》（原SMS4分组密码算法）。分组长度与密钥长度均为128bit（即16Byte）。");
+            } else if (newValue.equals("AES")) {
+                setDisableFalse(centerBox);
+                inputTextArea.setPromptText("密码学中的高级加密标准（Advanced Encryption Standard，AES），又称Rijndael加密法，是美国联邦政府采用的一种区块加密标准,采用对称分组密码体制，密钥长度支持为128/192/256bits。");
+            } else if (newValue.equals("DES")) {
+                setDisableFalse(centerBox);
+                macLenTextField.setDisable(true);
+                inputTextArea.setPromptText("DES全称为Data Encryption Standard，即数据加密标准，是一种使用密钥加密的块算法。支持3DES双倍和三倍的密钥。密钥长度分别为支持为128/192位。");
+            } else if (newValue.equals("Finalshell")) {
+                setDisableFalse(centerBox);
+                keyTextField.setDisable(true);
+                ivTextField.setDisable(true);
+                keyTypeComboBox.setDisable(true);
+                ivTypeComboBox.setDisable(true);
+                modeComboBox.setDisable(true);
+                paddingComboBox.setDisable(true);
+                macLenTextField.setDisable(true);
+                blockSizeTextField.setDisable(true);
+                saltTextField.setDisable(true);
+                saltTypeComboBox.setDisable(true);
+                inputDataTypeComboBox.setDisable(true);
+                outputDataTypeComboBox.setDisable(true);
+                inputDataTypeComboBox.getSelectionModel().select("UTF-8");
+                outputDataTypeComboBox.getSelectionModel().select("UTF-8");
+                inputTextArea.setPromptText("支持Finalshell加解密");
+            } else if (newValue.equals("Navicat11") || newValue.equals("Navicat12+")) {
+                setDisableFalse(centerBox);
+                keyTextField.setDisable(true);
+                ivTextField.setDisable(true);
+                keyTypeComboBox.setDisable(true);
+                ivTypeComboBox.setDisable(true);
+                modeComboBox.setDisable(true);
+                paddingComboBox.setDisable(true);
+                macLenTextField.setDisable(true);
+                blockSizeTextField.setDisable(true);
+                saltTextField.setDisable(true);
+                saltTypeComboBox.setDisable(true);
+                inputDataTypeComboBox.setDisable(true);
+                outputDataTypeComboBox.setDisable(true);
+                inputDataTypeComboBox.getSelectionModel().select("UTF-8");
+                outputDataTypeComboBox.getSelectionModel().select("UTF-8");
+                inputTextArea.setPromptText("支持Navicat11/12+加解密");
+            } else if (newValue.equals("致远数据库")) {
+                setDisableFalse(centerBox);
+                keyTextField.setDisable(true);
+                ivTextField.setDisable(true);
+                keyTypeComboBox.setDisable(true);
+                ivTypeComboBox.setDisable(true);
+                modeComboBox.setDisable(true);
+                paddingComboBox.setDisable(true);
+                macLenTextField.setDisable(true);
+                blockSizeTextField.setDisable(true);
+                saltTextField.setDisable(true);
+                saltTypeComboBox.setDisable(true);
+                inputDataTypeComboBox.setDisable(true);
+                outputDataTypeComboBox.setDisable(true);
+                inputDataTypeComboBox.getSelectionModel().select("UTF-8");
+                outputDataTypeComboBox.getSelectionModel().select("UTF-8");
+                inputTextArea.setPromptText("致远数据库加解密");
             }
         });
 
@@ -345,6 +430,8 @@ public class Main extends Application {
             String padding1 = paddingComboBox.getSelectionModel().getSelectedItem();
             // 获取块大小
             String blockSize1 = blockSizeTextField.getText();
+            // 获取认证标签长度
+            String macLen1 = macLenTextField.getText();
             try {
                 // 排除null
                 if (cryptoType1 == null) {
@@ -357,7 +444,25 @@ public class Main extends Application {
                 else if (cryptoType1.equals("SM4")){
                     encrypted_data = SM4_Encryption.sm4Encrypt(decrypted_data, decryptedDataType1, salt1, saltType1, key1, keyType1, mode1, padding1, blockSize1, iv1, ivType1);
                 }
-                else {
+                else if (cryptoType1.equals("AES")) {
+                    encrypted_data = AES_Encryption.aesEncrypt(decrypted_data, decryptedDataType1, salt1, saltType1, key1, keyType1, mode1, padding1, blockSize1, iv1, ivType1, macLen1);
+                }
+                else if (cryptoType1.equals("DES")){
+                    encrypted_data = DES_Encryption.desEncrypt(decrypted_data, decryptedDataType1, salt1, saltType1, key1, keyType1, mode1, padding1, blockSize1, iv1, ivType1);
+                }
+                else if (cryptoType1.equals("Finalshell")) {
+                    encrypted_data = FinalshellInit.encodePass(decrypted_data).getBytes();
+                }
+                else if (cryptoType1.equals("Navicat11")) {
+                    NavicatInit navicat = new NavicatInit(11);
+                    encrypted_data = navicat.encrypt(decrypted_data).getBytes();
+                }
+                else if (cryptoType1.equals("Navicat12+")) {
+                    NavicatInit navicat = new NavicatInit(12);
+                    encrypted_data = navicat.encrypt(decrypted_data).getBytes();
+                } else if (cryptoType1.equals("致远数据库")) {
+                    encrypted_data = TextEncoder.encode(decrypted_data).getBytes();
+                } else {
                     Alert alert = new Alert(Alert.AlertType.ERROR);
                     alert.setTitle("错误");
                     alert.setHeaderText("未选择加密方式");
@@ -380,6 +485,7 @@ public class Main extends Application {
                         outputTextArea.setText(Tools.toHexDump(encrypted_data));
                         break;
                 }
+                exportData = encrypted_data;
             } catch (Exception e) {
                 e.printStackTrace();
                 Alert alert = new Alert(Alert.AlertType.ERROR);
@@ -390,6 +496,7 @@ public class Main extends Application {
             }
         });
 
+        // 处理解密按钮
         decryptButton.setOnAction(event -> {
             byte[] decrypted_data;
             // 获取加密的原始数据
@@ -418,6 +525,8 @@ public class Main extends Application {
             String padding1 = paddingComboBox.getSelectionModel().getSelectedItem();
             // 获取块大小
             String blockSize1 = blockSizeTextField.getText();
+            // 获取认证标签长度
+            String macLen1 = macLenTextField.getText();
             // 未输入数据的情况
             if (encrypted_data.isEmpty()) {
                 Alert alert = new Alert(Alert.AlertType.ERROR);
@@ -437,7 +546,26 @@ public class Main extends Application {
                 if (cryptoType1.equals("SM4")){
                     decrypted_data = SM4_Decryption.sm4Decrypt(encrypted_data, inputDataType1, salt1, saltType1, key1, keyType1, mode1, padding1, blockSize1, iv1, ivType1);
                 }
-                else {
+                else if (cryptoType1.equals("AES")) {
+                    decrypted_data = AES_Decryption.aesDecrypt(encrypted_data, inputDataType1, salt1, saltType1, key1, keyType1, mode1, padding1, blockSize1, iv1, ivType1, macLen1);
+                }
+                else if (cryptoType1.equals("DES")) {
+                    decrypted_data = DES_Decryption.desDecrypt(encrypted_data, inputDataType1, salt1, saltType1, key1, keyType1, mode1, padding1, blockSize1, iv1, ivType1);
+                }
+                else if (cryptoType1.equals("Finalshell")) {
+                    decrypted_data = FinalshellInit.decodePass(encrypted_data).getBytes();
+                }
+                else if (cryptoType1.equals("Navicat11")) {
+                    NavicatInit navicat = new NavicatInit(11);
+                    decrypted_data = navicat.decrypt(encrypted_data).getBytes();
+                }
+                else if (cryptoType1.equals("Navicat12+")) {
+                    NavicatInit navicat = new NavicatInit(12);
+                    decrypted_data = navicat.decrypt(encrypted_data).getBytes();
+                }
+                else if (cryptoType1.equals("致远数据库")) {
+                    decrypted_data = TextEncoder.decode(encrypted_data).getBytes();
+                } else {
                     Alert alert = new Alert(Alert.AlertType.ERROR);
                     alert.setTitle("错误");
                     alert.setHeaderText("未选择解密方式");
@@ -448,7 +576,7 @@ public class Main extends Application {
                 // 输出格式
                 switch (outputDataType1) {
                     case "Hex":
-                        outputTextArea.setText(Arrays.toString(decrypted_data));
+                        outputTextArea.setText(Hex.toHexString(decrypted_data));
                         break;
                     case "Base64":
                         outputTextArea.setText(Base64.getEncoder().encodeToString(decrypted_data));
@@ -460,6 +588,7 @@ public class Main extends Application {
                         outputTextArea.setText(Tools.toHexDump(decrypted_data));
                         break;
                 }
+                exportData = decrypted_data;
             } catch (Exception e) {
                 e.printStackTrace();
                 Alert alert = new Alert(Alert.AlertType.ERROR);
@@ -467,6 +596,76 @@ public class Main extends Application {
                 alert.setHeaderText("解密失败, 原因如下: ");
                 alert.setContentText(e.getMessage());
                 alert.showAndWait();
+            }
+        });
+
+        // 处理拖拽文件
+        inputTextArea.setOnDragDropped(event -> {
+            Dragboard db = event.getDragboard();
+            boolean success = false;
+            if (db.hasFiles()) {
+                File file = db.getFiles().get(0);
+                try {
+                    String content = new String(Files.readAllBytes(file.toPath()));
+                    inputTextArea.setText(content);
+                    success = true;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setTitle("错误");
+                    alert.setHeaderText("读取文件失败, 原因如下: ");
+                    alert.setContentText(e.getMessage());
+                    alert.showAndWait();
+                }
+            }
+            event.setDropCompleted(success);
+            event.consume();
+        });
+
+        // 处理上传按钮
+        uploadButton.setOnAction(event -> {
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("选择文件");
+            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("所有文件", "*.*"));
+            inputDataTypeComboBox.getSelectionModel().select("Hex");
+
+            // 打开文件选择对话框
+            File file = fileChooser.showOpenDialog(primaryStage);
+            if (file != null) {
+                inputTextArea.setText("Selected file: " + file.getName());
+                try {
+                    // 读取文件内容并以hex显示在 TextArea 中
+                    String content = Hex.toHexString(Files.readAllBytes(file.toPath()));
+                    inputTextArea.setText(content);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        // 处理导出按钮
+        exportButton.setOnAction(event -> {
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("保存文件");
+            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("所有文件", "*.*"));
+            // 获取输出格式
+            File file = fileChooser.showSaveDialog(primaryStage);
+            if (file != null) {
+                if (outputDataTypeComboBox.getSelectionModel().getSelectedItem().equals("UTF-8")){
+                    try (FileOutputStream fos = new FileOutputStream(file)) {
+                        // 将字节数组写入文件
+                        fos.write(exportData);
+                        return;
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+                try (FileWriter writer = new FileWriter(file)) {
+                    // 将文本区域内容写入文件
+                    writer.write(outputTextArea.getText());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         });
     }

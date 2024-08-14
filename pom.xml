@@ -28,6 +28,12 @@
 			<artifactId>hutool-all</artifactId>
 			<version>5.7.13</version>
 		</dependency>
+
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.11.0</version> <!-- 版本号可以根据需要进行更新 -->
+        </dependency>
     </dependencies>
 
 

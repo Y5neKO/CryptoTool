@@ -1,10 +1,10 @@
-package com.y5neko.decrypt;
+package com.y5neko.encrypt;
 
 import com.y5neko.tools.Tools;
 import org.bouncycastle.crypto.BlockCipher;
 import org.bouncycastle.crypto.CipherParameters;
 import org.bouncycastle.crypto.InvalidCipherTextException;
-import org.bouncycastle.crypto.engines.SM4Engine;
+import org.bouncycastle.crypto.engines.AESEngine;
 import org.bouncycastle.crypto.modes.*;
 import org.bouncycastle.crypto.paddings.*;
 import org.bouncycastle.crypto.params.AEADParameters;
@@ -18,13 +18,14 @@ import javax.crypto.spec.SecretKeySpec;
 import java.security.Security;
 import java.util.Base64;
 
+import static com.y5neko.tools.Tools.concatBytes;
 import static com.y5neko.tools.Tools.getPadding;
 
-public class SM4_Decryption {
-    public static byte[] sm4Decrypt(String paramData, String inputType, String salt, String saltType, String key, String keyType, String mode, String padding, String blocksize, String iv, String ivType) throws InvalidCipherTextException {
-         Security.addProvider(new BouncyCastleProvider());
-        // 创建SM4算法实例
-        BlockCipher engine = new SM4Engine();
+public class AES_Encryption {
+    public static byte[] aesEncrypt(String paramData, String inputType, String salt, String saltType, String key, String keyType, String mode, String padding, String blocksize, String iv, String ivType, String macLen) throws InvalidCipherTextException {
+        Security.addProvider(new BouncyCastleProvider());
+
+        BlockCipher engine = new AESEngine();
         PaddedBufferedBlockCipher cipher = null;
         org.bouncycastle.crypto.paddings.BlockCipherPadding paddingType;
 
@@ -48,6 +49,24 @@ public class SM4_Decryption {
                     break;
                 case "Hexdump":
                     data = Tools.toHexDump(paramData.getBytes()).getBytes();
+            }
+        }
+
+        // 处理盐值为字节数组并拼接盐值
+        if (salt != null) {
+            switch (saltType) {
+                case "Base64":
+                    saltBytes = Base64.getDecoder().decode(salt);
+                    break;
+                case "Hex":
+                    saltBytes = Hex.decode(salt);
+                    break;
+                case "UTF-8":
+                    saltBytes = salt.getBytes();
+                    break;
+            }
+            if (saltBytes != null) {
+                data = concatBytes(data, saltBytes);
             }
         }
 
@@ -106,8 +125,8 @@ public class SM4_Decryption {
             // 首先处理GCM情况
             if (mode.equals("GCM")) {
                 GCMBlockCipher gcm = new GCMBlockCipher(engine);
-                CipherParameters params = new AEADParameters(new KeyParameter(secretKey.getEncoded()), 128, ivBytes);
-                gcm.init(false, params);
+                CipherParameters params = new AEADParameters(new KeyParameter(secretKey.getEncoded()), Integer.parseInt(macLen), ivBytes);
+                gcm.init(true, params);
 
                 byte[] cipherText = new byte[gcm.getOutputSize(data.length)];
                 int len = gcm.processBytes(data, 0, data.length, cipherText, 0);
@@ -116,11 +135,11 @@ public class SM4_Decryption {
             }
             // 排除ECB模式并初始化cipher
             if (cipher != null && !mode.equals("ECB")) {
-                cipher.init(false, new ParametersWithIV(new KeyParameter(secretKey.getEncoded()), ivBytes));
+                cipher.init(true, new ParametersWithIV(new KeyParameter(secretKey.getEncoded()), ivBytes));
             } else if(mode.equals("ECB")){
-                cipher.init(false, new KeyParameter(secretKey.getEncoded()));
+                cipher.init(true, new KeyParameter(secretKey.getEncoded()));
             }
-            // 开始解密
+            // 开始加密
             byte[] cipherText = new byte[cipher.getOutputSize(data.length)];
             int outputLen = cipher.processBytes(data, 0, data.length, cipherText, 0);
             cipher.doFinal(cipherText, outputLen);

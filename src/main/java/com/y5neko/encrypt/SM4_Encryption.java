@@ -2,13 +2,12 @@ package com.y5neko.encrypt;
 
 import com.y5neko.tools.Tools;
 import org.bouncycastle.crypto.BlockCipher;
+import org.bouncycastle.crypto.CipherParameters;
 import org.bouncycastle.crypto.InvalidCipherTextException;
 import org.bouncycastle.crypto.engines.SM4Engine;
-import org.bouncycastle.crypto.modes.CBCBlockCipher;
-import org.bouncycastle.crypto.modes.CFBBlockCipher;
-import org.bouncycastle.crypto.modes.OFBBlockCipher;
-import org.bouncycastle.crypto.modes.SICBlockCipher;
+import org.bouncycastle.crypto.modes.*;
 import org.bouncycastle.crypto.paddings.*;
+import org.bouncycastle.crypto.params.AEADParameters;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.bouncycastle.crypto.params.ParametersWithIV;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -20,6 +19,7 @@ import java.security.Security;
 import java.util.Base64;
 
 import static com.y5neko.tools.Tools.concatBytes;
+import static com.y5neko.tools.Tools.getPadding;
 
 public class SM4_Encryption {
     public static byte[] sm4Encrypt(String paramData, String inputType, String salt, String saltType, String key, String keyType, String mode, String padding, String blocksize, String iv, String ivType) throws InvalidCipherTextException {
@@ -122,6 +122,17 @@ public class SM4_Encryption {
                 case "UTF-8":
                     ivBytes = iv.getBytes();
             }
+            // 首先处理GCM情况
+            if (mode.equals("GCM")) {
+                GCMBlockCipher gcm = new GCMBlockCipher(engine);
+                CipherParameters params = new AEADParameters(new KeyParameter(secretKey.getEncoded()), 128, ivBytes);
+                gcm.init(true, params);
+
+                byte[] cipherText = new byte[gcm.getOutputSize(data.length)];
+                int len = gcm.processBytes(data, 0, data.length, cipherText, 0);
+                gcm.doFinal(cipherText, len);
+                return cipherText;
+            }
             // 排除ECB模式并初始化cipher
             if (cipher != null && !mode.equals("ECB")) {
                 cipher.init(true, new ParametersWithIV(new KeyParameter(secretKey.getEncoded()), ivBytes));
@@ -135,25 +146,5 @@ public class SM4_Encryption {
             return cipherText;
         }
         return null;
-    }
-
-    /**
-     * 获取填充方式
-     * @param paddingType 填充方式
-     * @return 填充方式实例
-     */
-    private static org.bouncycastle.crypto.paddings.BlockCipherPadding getPadding(String paddingType) {
-        switch (paddingType) {
-            case "PKCS7Padding":
-                return new PKCS7Padding();
-            case "ZeroPadding":
-                return new ZeroBytePadding();
-            case "ISO10126d2Padding":
-                return new ISO10126d2Padding();
-            case "ANSIX923Padding":
-                return new X923Padding();
-            default:
-                throw new IllegalArgumentException("Unsupported padding type: " + paddingType);
-        }
     }
 }

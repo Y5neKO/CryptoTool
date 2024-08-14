@@ -4,7 +4,7 @@ import com.y5neko.tools.Tools;
 import org.bouncycastle.crypto.BlockCipher;
 import org.bouncycastle.crypto.CipherParameters;
 import org.bouncycastle.crypto.InvalidCipherTextException;
-import org.bouncycastle.crypto.engines.SM4Engine;
+import org.bouncycastle.crypto.engines.AESEngine;
 import org.bouncycastle.crypto.modes.*;
 import org.bouncycastle.crypto.paddings.*;
 import org.bouncycastle.crypto.params.AEADParameters;
@@ -18,13 +18,13 @@ import javax.crypto.spec.SecretKeySpec;
 import java.security.Security;
 import java.util.Base64;
 
-import static com.y5neko.tools.Tools.getPadding;
+import static com.y5neko.tools.Tools.concatBytes;
 
-public class SM4_Decryption {
-    public static byte[] sm4Decrypt(String paramData, String inputType, String salt, String saltType, String key, String keyType, String mode, String padding, String blocksize, String iv, String ivType) throws InvalidCipherTextException {
-         Security.addProvider(new BouncyCastleProvider());
-        // 创建SM4算法实例
-        BlockCipher engine = new SM4Engine();
+public class AES_Decryption {
+    public static byte[] aesDecrypt(String paramData, String inputType, String salt, String saltType, String key, String keyType, String mode, String padding, String blocksize, String iv, String ivType, String macLen) throws InvalidCipherTextException, InvalidCipherTextException {
+        Security.addProvider(new BouncyCastleProvider());
+        // 创建AES算法实例
+        BlockCipher engine = new AESEngine();
         PaddedBufferedBlockCipher cipher = null;
         org.bouncycastle.crypto.paddings.BlockCipherPadding paddingType;
 
@@ -51,6 +51,24 @@ public class SM4_Decryption {
             }
         }
 
+        // 处理盐值为字节数组并拼接盐值
+        if (salt != null) {
+            switch (saltType) {
+                case "Base64":
+                    saltBytes = Base64.getDecoder().decode(salt);
+                    break;
+                case "Hex":
+                    saltBytes = Hex.decode(salt);
+                    break;
+                case "UTF-8":
+                    saltBytes = salt.getBytes();
+                    break;
+            }
+            if (saltBytes != null) {
+                data = concatBytes(data, saltBytes);
+            }
+        }
+
         // 处理密钥
         if (key != null) {
             switch (keyType) {
@@ -70,7 +88,7 @@ public class SM4_Decryption {
         }
 
         // 处理填充方式
-        paddingType = getPadding(padding);
+        paddingType = Tools.getPadding(padding);
 
         // 处理模式
         switch (mode) {
@@ -106,7 +124,7 @@ public class SM4_Decryption {
             // 首先处理GCM情况
             if (mode.equals("GCM")) {
                 GCMBlockCipher gcm = new GCMBlockCipher(engine);
-                CipherParameters params = new AEADParameters(new KeyParameter(secretKey.getEncoded()), 128, ivBytes);
+                CipherParameters params = new AEADParameters(new KeyParameter(secretKey.getEncoded()), Integer.parseInt(macLen), ivBytes);
                 gcm.init(false, params);
 
                 byte[] cipherText = new byte[gcm.getOutputSize(data.length)];

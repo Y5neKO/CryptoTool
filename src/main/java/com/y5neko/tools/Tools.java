@@ -9,6 +9,10 @@ import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.CornerRadii;
 import javafx.scene.paint.Color;
+import org.bouncycastle.crypto.paddings.ISO10126d2Padding;
+import org.bouncycastle.crypto.paddings.PKCS7Padding;
+import org.bouncycastle.crypto.paddings.X923Padding;
+import org.bouncycastle.crypto.paddings.ZeroBytePadding;
 
 import java.util.Arrays;
 
@@ -117,5 +121,25 @@ public class Tools {
         byte[] result = Arrays.copyOf(data, data.length + salt.length);
         System.arraycopy(salt, 0, result, data.length, salt.length);
         return result;
+    }
+
+    /**
+     * 获取填充方式
+     * @param paddingType 填充方式
+     * @return 填充方式实例
+     */
+    public static org.bouncycastle.crypto.paddings.BlockCipherPadding getPadding(String paddingType) {
+        switch (paddingType) {
+            case "PKCS7Padding":
+                return new PKCS7Padding();
+            case "ZeroPadding":
+                return new ZeroBytePadding();
+            case "ISO10126d2Padding":
+                return new ISO10126d2Padding();
+            case "ANSIX923Padding":
+                return new X923Padding();
+            default:
+                throw new IllegalArgumentException("Unsupported padding type: " + paddingType);
+        }
     }
 }

@@ -1,13 +1,16 @@
 package com.y5neko.decrypt;
 
 import com.y5neko.tools.Tools;
+import javafx.scene.control.Alert;
 import org.bouncycastle.crypto.BlockCipher;
-import org.bouncycastle.crypto.CipherParameters;
 import org.bouncycastle.crypto.InvalidCipherTextException;
-import org.bouncycastle.crypto.engines.SM4Engine;
-import org.bouncycastle.crypto.modes.*;
-import org.bouncycastle.crypto.paddings.*;
-import org.bouncycastle.crypto.params.AEADParameters;
+import org.bouncycastle.crypto.engines.DESEngine;
+import org.bouncycastle.crypto.engines.DESedeEngine;
+import org.bouncycastle.crypto.modes.CBCBlockCipher;
+import org.bouncycastle.crypto.modes.CFBBlockCipher;
+import org.bouncycastle.crypto.modes.OFBBlockCipher;
+import org.bouncycastle.crypto.modes.SICBlockCipher;
+import org.bouncycastle.crypto.paddings.PaddedBufferedBlockCipher;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.bouncycastle.crypto.params.ParametersWithIV;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -18,13 +21,17 @@ import javax.crypto.spec.SecretKeySpec;
 import java.security.Security;
 import java.util.Base64;
 
+import static com.y5neko.tools.Tools.concatBytes;
 import static com.y5neko.tools.Tools.getPadding;
 
-public class SM4_Decryption {
-    public static byte[] sm4Decrypt(String paramData, String inputType, String salt, String saltType, String key, String keyType, String mode, String padding, String blocksize, String iv, String ivType) throws InvalidCipherTextException {
-         Security.addProvider(new BouncyCastleProvider());
-        // 创建SM4算法实例
-        BlockCipher engine = new SM4Engine();
+public class DES_Decryption {
+    public static byte[] desDecrypt(String paramData, String inputType, String salt, String saltType, String key, String keyType, String mode, String padding, String blocksize, String iv, String ivType) throws InvalidCipherTextException {
+        Security.addProvider(new BouncyCastleProvider());
+
+        BlockCipher engine = new DESEngine();
+        if (key.length() > 8) {
+            engine = new DESedeEngine();
+        }
         PaddedBufferedBlockCipher cipher = null;
         org.bouncycastle.crypto.paddings.BlockCipherPadding paddingType;
 
@@ -48,6 +55,24 @@ public class SM4_Decryption {
                     break;
                 case "Hexdump":
                     data = Tools.toHexDump(paramData.getBytes()).getBytes();
+            }
+        }
+
+        // 处理盐值为字节数组并拼接盐值
+        if (salt != null) {
+            switch (saltType) {
+                case "Base64":
+                    saltBytes = Base64.getDecoder().decode(salt);
+                    break;
+                case "Hex":
+                    saltBytes = Hex.decode(salt);
+                    break;
+                case "UTF-8":
+                    saltBytes = salt.getBytes();
+                    break;
+            }
+            if (saltBytes != null) {
+                data = concatBytes(data, saltBytes);
             }
         }
 
@@ -103,16 +128,13 @@ public class SM4_Decryption {
                 case "UTF-8":
                     ivBytes = iv.getBytes();
             }
-            // 首先处理GCM情况
             if (mode.equals("GCM")) {
-                GCMBlockCipher gcm = new GCMBlockCipher(engine);
-                CipherParameters params = new AEADParameters(new KeyParameter(secretKey.getEncoded()), 128, ivBytes);
-                gcm.init(false, params);
-
-                byte[] cipherText = new byte[gcm.getOutputSize(data.length)];
-                int len = gcm.processBytes(data, 0, data.length, cipherText, 0);
-                gcm.doFinal(cipherText, len);
-                return cipherText;
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setTitle("错误");
+                alert.setHeaderText("加密失败, 原因如下: ");
+                alert.setContentText("DES不支持GCM");
+                alert.showAndWait();
+                return "DES不支持GCM".getBytes();
             }
             // 排除ECB模式并初始化cipher
             if (cipher != null && !mode.equals("ECB")) {
