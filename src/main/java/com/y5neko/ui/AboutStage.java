@@ -1,6 +1,7 @@
 package com.y5neko.ui;
 
 
+import com.y5neko.tools.Tools;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -17,9 +18,11 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
+import java.io.IOException;
+
 public class AboutStage extends Stage {
 
-    public AboutStage() {
+    public AboutStage() throws IOException {
         // 创建一个新的Stage作为“关于”窗口
         this.setTitle("关于");
         this.initStyle(StageStyle.UNDECORATED);
@@ -31,7 +34,7 @@ public class AboutStage extends Stage {
         vbox.setPadding(new Insets(10));
         vbox.setAlignment(Pos.CENTER_LEFT);
         vbox.setOnMouseClicked(e -> this.close());
-        vbox.setStyle("-fx-background-color: #2b2d30; -fx-padding: 10;");;
+        vbox.setStyle("-fx-background-color: #2b2d30; -fx-padding: 10;");
 
         // 创建一个网格布局
         GridPane gridPane = new GridPane();
@@ -44,10 +47,10 @@ public class AboutStage extends Stage {
         ImageView imageView = new ImageView(new Image("img/icon.png", 150, 150, true, true)); // 替换为你的图标路径
 
         // 添加标题和描述信息
-        Label titleLabel = new Label("CT v0.2");
+        Label titleLabel = new Label("CT v" + Tools.getProperty("version"));
         Label descriptionLabel = new Label("CryptoTool\n综合加解密工具\n\n\n\n\n");
-        Label buildInfoLabel = new Label("Build Info: 20240815");
-        Label copyrightLabel = new Label("Copyright (c) 2024, Y5neKO. All rights reserved.");
+        Label buildInfoLabel = new Label("Build Info: " + Tools.getProperty("buildinfo"));
+        Label copyrightLabel = new Label("Copyright (c) " + Tools.getProperty("year") + ", " + Tools.getProperty("author") + ". All rights reserved.");
         titleLabel.setTextFill(Color.WHITE);
         descriptionLabel.setTextFill(Color.WHITE);
         buildInfoLabel.setTextFill(Color.WHITE);

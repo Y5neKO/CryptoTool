@@ -10,6 +10,11 @@ import com.y5neko.decrypt.SM4_Decryption;
 import com.y5neko.encrypt.*;
 import com.y5neko.tools.Tools;
 import com.y5neko.ui.AboutStage;
+import com.y5neko.ui.CheckVersionStage;
+import com.y5neko.ui.PluginsStage;
+import com.y5neko.utils.FirstInit;
+import com.y5neko.utils.LoadPlugins;
+import com.y5neko.utils.Plugins;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -22,7 +27,6 @@ import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
@@ -30,6 +34,7 @@ import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.Dragboard;
@@ -46,29 +51,90 @@ import org.bouncycastle.util.encoders.Hex;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.image.BufferedImage;
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.file.Files;
-import java.util.Arrays;
-import java.util.Base64;
+import java.util.*;
+import java.util.List;
 
 public class Main extends Application {
     private MenuBar menuBar;
 
-    public static Image icon = new Image("img/icon.png");   // Image对象是通过底层的构造方法获取文件内容，所以可以直接指定基于resource目录的绝对路径
+    public static Image icon = new Image("img/icon.png");
 
     private double xOffset = 0;
     private double yOffset = 0;
 
-    byte[] exportData;
+    byte[] exportData;      // 用于处理接收导出的数据
+
+    List<String[]> pluginInfos = new ArrayList<>();     // 用于展示插件信息
+
 
     public static void main(String[] args) {
+        new FirstInit();
         launch(args);
     }
 
     @Override
     public void start(Stage primaryStage) {
-        // =============================================================Step 1: 创建一个菜单栏=============================================================
+        // =============================================================Step 0: 插件加载=============================================================
+        // 创建一个列表，接收所有的插件类
+        List<Class<?>> plugins = new ArrayList<>();
 
+        // 获取所有的插件类名
+        LoadPlugins loadPlugins = new LoadPlugins();
+        String[] pluginNames = loadPlugins.getPluginNames();
+
+        // 创建一个列表，获取所有插件的完全限定名
+        List<String> pluginNamesList = new ArrayList<>();
+        for (int plguginNameIndex = 0; plguginNameIndex < loadPlugins.getPluginNames().length; plguginNameIndex++) {
+            pluginNamesList.add("com.y5neko.plugin." + loadPlugins.getPluginNames()[plguginNameIndex]);
+        }
+
+        System.out.println("所有的插件完全限定名："+pluginNamesList);
+
+        // 向插件类列表中写入所有的插件类
+        for (int pluginIndex = 0; pluginIndex < pluginNamesList.size(); pluginIndex++) {
+            try {
+                // 将插件JAR文件转换为URL
+                File pluginFile = new File("plugins/" + loadPlugins.getPluginNames()[pluginIndex] + ".jar");
+                System.out.println("当前处理："+"plugins/" + loadPlugins.getPluginNames()[pluginIndex] + ".jar");
+                URL pluginURL = pluginFile.toURI().toURL();
+
+
+                // 创建URLClassLoader加载JAR
+                URLClassLoader classLoader = new URLClassLoader(new URL[] { pluginURL });
+                // 加载插件类
+                Class<?> pluginClass = classLoader.loadClass(pluginNamesList.get(pluginIndex));
+
+                if (Plugins.class.isAssignableFrom(pluginClass)){
+                    plugins.add(pluginClass);
+                    String pluginName = Tools.findDeclaredField(pluginClass, "pluginName");
+                    String pluginVersion = Tools.findDeclaredField(pluginClass, "pluginVersion");
+                    String pluginAuthor = Tools.findDeclaredField(pluginClass, "pluginAuthor");
+                    String pluginDescription = Tools.findDeclaredField(pluginClass, "pluginDescription");
+                    String[] pluginInfo = {
+                            pluginName,
+                            pluginVersion,
+                            pluginAuthor,
+                            pluginDescription
+                    };
+                    pluginInfos.add(pluginInfo);
+                } else {
+                    System.out.println("未实现接口");
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        System.out.println("所有插件："+plugins);
+
+
+        // =============================================================Step 1: 创建一个菜单栏=============================================================
         /*
           设置一个网格视图作为菜单栏
          */
@@ -151,6 +217,10 @@ public class Main extends Application {
         Label cryptoTypeLabel = new Label("加密类型: ");
         ObservableList<String> cryptoType = FXCollections.observableArrayList("MD5", "NTLM Hash", "SM3", "SM4", "AES", "DES", "Finalshell", "Navicat11", "Navicat12+", "致远数据库");
         ComboBox<String> cryptoTypeComboBox = new ComboBox<>(cryptoType);
+        // ----------加载插件到选择列表----------
+        if (pluginNames.length > 0) {
+            cryptoType.addAll(Arrays.asList(pluginNames));
+        }
 //        cryptoTypeComboBox.getSelectionModel().select(0);
         // ----------------------------------------------------------------------
         Label keyLabel = new Label("密钥: ");
@@ -200,7 +270,9 @@ public class Main extends Application {
 
         // ----------第三层加密按钮----------
         Button encryptButton = new Button(" 加密 ");
+        encryptButton.setStyle("-fx-background-color: #007bff; -fx-text-fill: white; -fx-font-size: 10pt;");;
         Button decryptButton = new Button(" 解密 ");
+        decryptButton.setStyle("-fx-background-color: rgba(255,0,0,0.53); -fx-text-fill: white; -fx-font-size: 10pt;");
         Button uploadButton = new Button("上传文件");
         Button exportButton = new Button("导出结果");
         // ----------------------------------------------------------------------
@@ -433,6 +505,42 @@ public class Main extends Application {
                     outputDataTypeComboBox.getSelectionModel().select("UTF-8");
                     inputTextArea.setPromptText("致远数据库加解密");
                     break;
+                default:
+                    setDisableFalse(centerBox);
+                    keyTextField.setDisable(true);
+                    ivTextField.setDisable(true);
+                    keyTypeComboBox.setDisable(true);
+                    ivTypeComboBox.setDisable(true);
+                    modeComboBox.setDisable(true);
+                    paddingComboBox.setDisable(true);
+                    macLenTextField.setDisable(true);
+                    blockSizeTextField.setDisable(true);
+                    saltTextField.setDisable(true);
+                    saltTypeComboBox.setDisable(true);
+                    inputDataTypeComboBox.setDisable(true);
+                    outputDataTypeComboBox.setDisable(true);
+                    inputDataTypeComboBox.setDisable(true);
+                    outputDataTypeComboBox.setDisable(true);
+                    inputTextArea.setPromptText("请在插件界面操作");
+                    inputTextArea.setDisable(true);
+                    outputTextArea.setDisable(true);
+                    if (pluginNames.length > 0) {
+                        Class<?> pluginClazz = Tools.getClassByName(plugins, "com.y5neko.plugin." + newValue);
+                        if (pluginClazz != null) {
+                            Plugins plugin = null;
+                            try {
+                                plugin = (Plugins) pluginClazz.newInstance();
+                            } catch (InstantiationException | IllegalAccessException e) {
+                                throw new RuntimeException(e);
+                            }
+                            plugin.showStage();
+                            String pluginName = plugin.getPluginName();
+                            String pluginVersion = plugin.getPluginVersion();
+                            String pluginDescription = plugin.getPluginDescription();
+                            String pluginAuthor = plugin.getAuthor();
+                        }
+                        break;
+                    }
             }
         });
 
@@ -736,20 +844,29 @@ public class Main extends Application {
         Menu helpMenu = new Menu("帮助");
         menuBar.getMenus().addAll(settingMenu, helpMenu);
         // ----------第一个按钮----------
-        MenuItem settingProxy = new MenuItem("主题设置(暂不支持)");
-        settingMenu.getItems().addAll(settingProxy);
-        settingProxy.setOnAction(event -> System.out.println("主题设置"));
+        MenuItem themeSettingProxyButton = new MenuItem("主题设置(暂不支持)");
+        settingMenu.getItems().addAll(themeSettingProxyButton);
+        themeSettingProxyButton.setOnAction(event -> System.out.println("主题设置"));
         // ----------第二个按钮----------
-        MenuItem about = new MenuItem("关于");
-        helpMenu.getItems().addAll(about);
-        about.setOnAction(event -> new AboutStage());
+        MenuItem aboutButton = new MenuItem("关于");
+        helpMenu.getItems().addAll(aboutButton);
+        aboutButton.setOnAction(event -> {
+            try {
+                new AboutStage();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
         // ----------第三个按钮----------
-//        MenuItem checkUpdate = new MenuItem("检查更新");
-//        helpMenu.getItems().add(checkUpdate);
-//        checkUpdate.setOnAction(event -> System.out.println("检查更新"));
+        MenuItem checkUpdateButton = new MenuItem("检查更新");
+        helpMenu.getItems().add(checkUpdateButton);
+        checkUpdateButton.setOnAction(event -> {
+            new CheckVersionStage(Tools.checkVersion());
+        });
         // ----------第四个按钮----------
-        MenuItem plugins = new MenuItem("插件(暂不支持)");
-        settingMenu.getItems().add(plugins);
+        MenuItem pluginsButton = new MenuItem("插件");
+        pluginsButton.setOnAction(event -> {new PluginsStage(pluginInfos);});
+        settingMenu.getItems().add(pluginsButton);
     }
 
     /**

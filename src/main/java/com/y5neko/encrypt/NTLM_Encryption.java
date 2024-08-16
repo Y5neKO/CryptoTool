@@ -1,10 +1,10 @@
 package com.y5neko.encrypt;
 
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import java.security.Security;
 
 public class NTLM_Encryption {

@@ -2,8 +2,6 @@ package com.y5neko.asset;
 
 import com.seeyon.ctp.util.TextEncoder;
 
-import java.io.IOException;
-
 public class SeeyonInit {
     private static final int[] PASSWORD_MASK_ARRAY = {19, 78, 10, 15, 100, 213, 43, 23};
 

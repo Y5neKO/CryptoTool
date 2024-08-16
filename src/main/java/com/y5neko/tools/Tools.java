@@ -1,5 +1,7 @@
 package com.y5neko.tools;
 
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContentDisplay;
@@ -14,7 +16,15 @@ import org.bouncycastle.crypto.paddings.PKCS7Padding;
 import org.bouncycastle.crypto.paddings.X923Padding;
 import org.bouncycastle.crypto.paddings.ZeroBytePadding;
 
-import java.util.Arrays;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
 
 public class Tools {
     /**
@@ -140,6 +150,137 @@ public class Tools {
                 return new X923Padding();
             default:
                 throw new IllegalArgumentException("Unsupported padding type: " + paddingType);
+        }
+    }
+
+    /**
+     * 获取固定配置文件中的属性值
+     * @param key 属性名
+     * @return 属性值
+     * @throws IOException 如果读取配置文件失败
+     */
+    public static String getProperty(String key) throws IOException {
+        // 从配置文件中获取属性值
+        Properties properties = new Properties();
+        properties.load(Tools.class.getClassLoader().getResourceAsStream("info.properties"));
+        return properties.getProperty(key);
+    }
+
+    /**
+     * 通过github api 获取最新版本
+     * @return 最新版本信息
+     */
+    public static HashMap<String, String> checkVersion() {
+        String GITHUB_API_URL = "https://api.github.com/repos/Y5neKO/CryptoTool/releases/latest";
+        try {
+            URL url = new URL(GITHUB_API_URL);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setRequestProperty("Accept", "application/json");
+
+            int responseCode = connection.getResponseCode();
+            if (responseCode == 200) {
+                BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                String inputLine;
+                StringBuilder content = new StringBuilder();
+                while ((inputLine = in.readLine()) != null) {
+                    content.append(inputLine);
+                }
+                in.close();
+                // 解析JSON响应
+                JSONObject jsonObject = JSONObject.parseObject(content.toString());
+                String latestVersion = jsonObject.getString("tag_name");
+                String nowVersion = Tools.getProperty("version");
+                HashMap<String, String> checkResult = new HashMap<>();
+                if (!latestVersion.contains(nowVersion)) {
+                    System.out.println(latestVersion);
+                    checkResult.put("latestVersion", latestVersion);
+                    checkResult.put("isNewVersion", "false");
+                } else {
+                    checkResult.put("latestVersion", latestVersion);
+                    checkResult.put("isNewVersion", "true");
+                }
+                checkResult.put("description", jsonObject.getString("body"));
+                JSONArray assetsArray = jsonObject.getJSONArray("assets");
+                JSONObject firstAsset = assetsArray.getJSONObject(0);
+                String downloadUrl = firstAsset.getString("browser_download_url");
+                checkResult.put("downloadUrl", downloadUrl);
+                return checkResult;
+            } else {
+                HashMap<String, String> checkResult = new HashMap<>();
+                checkResult.put("isNewVersion", "unkonwn");
+                return checkResult;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            HashMap<String, String> checkResult = new HashMap<>();
+            checkResult.put("isNewVersion", "unkonwn");
+            return checkResult;
+        }
+    }
+
+    /**
+     * 创建文件夹
+     * @param dirName 文件夹名
+     */
+    public static void mkdir(String dirName) {
+        // 要创建的文件夹路径
+        Path directoryPath = Paths.get(dirName);
+        try {
+            // 创建文件夹
+            if (Files.notExists(directoryPath)) {
+                Files.createDirectories(directoryPath); // 创建多级目录
+                System.out.println("Directory created successfully: " + directoryPath.toString());
+            } else {
+                System.out.println("Directory already exists: " + directoryPath.toString());
+            }
+        } catch (IOException e) {
+            System.out.println("Failed to create directory: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 根据类名在列表中查找Class对象
+     *
+     * @param classes 类列表
+     * @param className 要查找的类名（全限定名）
+     * @return 包含找到的Class对象的Optional，如果没有找到则为Optional.empty()
+     */
+    public static Optional<Class<?>> findClassByName(List<Class<?>> classes, String className) {
+        for (Class<?> clazz : classes) {
+            if (clazz.getName().equals(className)) {
+                return Optional.of(clazz);
+            }
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * 根据类名在列表中查找Class对象
+     * @param plugins 插件列表
+     * @param className 类名
+     * @return 包含找到的Class对象
+     */
+    public static Class<?> getClassByName(List<Class<?>> plugins, String className) {
+        for (Class<?> clazz : plugins) {
+            if (clazz.getName().equals(className) || clazz.getSimpleName().equals(className)) {
+                return clazz;
+            }
+        }
+        return null; // 如果找不到匹配的类，则返回null
+    }
+
+    /**
+     * 查找静态字段
+     * @param clazz 类
+     * @param fieldName 字段名
+     * @return 字段值
+     */
+    public static String findDeclaredField(Class<?> clazz, String fieldName) {
+        try {
+            return (String) clazz.getDeclaredField(fieldName).get(null);
+        } catch (Exception e) {
+            return "获取失败";
         }
     }
 }
