@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -200,7 +201,8 @@ public class Tools {
                     checkResult.put("latestVersion", latestVersion);
                     checkResult.put("isNewVersion", "true");
                 }
-                checkResult.put("description", jsonObject.getString("body"));
+                checkResult.put("description", new String(jsonObject.getString("body").getBytes(), StandardCharsets.UTF_8).replace("\\r\\n", "\\n"));
+
                 JSONArray assetsArray = jsonObject.getJSONArray("assets");
                 JSONObject firstAsset = assetsArray.getJSONObject(0);
                 String downloadUrl = firstAsset.getString("browser_download_url");
@@ -282,5 +284,25 @@ public class Tools {
         } catch (Exception e) {
             return "获取失败";
         }
+    }
+
+    // 计算字符串中子串的出现次数
+    public static int countOccurrences(String text, String substring) {
+        int count = 0;
+        int index = 0;
+        while ((index = text.indexOf(substring, index)) != -1) {
+            count++;
+            index += substring.length();
+        }
+        return count;
+    }
+
+    public static String returnIdentifier(String text) {
+        // 识别不同类型的换行符
+        int unixLineBreaks = countOccurrences(text, "\n") - countOccurrences(text, "\r\n");
+        int windowsLineBreaks = countOccurrences(text, "\r\n");
+
+        // 替换所有换行符为统一格式
+        return text.replace("\r\n", "\n");
     }
 }
