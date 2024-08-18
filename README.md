@@ -53,7 +53,7 @@ v0.3版本开始支持插件功能。
 
 2. 开发规范
 
-- 插件主类包名为: `com.y5neko.plugin.xxx`;
+- 插件主类包名为: `com.y5neko.plugin`;
 - 主类名和文件名必须一致: 例如`RSA.jar`则主类名为`RSA`;
 - 主类实现`com.y5neko.utils.Plugins`接口;
 - 主类继承`javafx.stage.Stage`;
