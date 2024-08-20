@@ -273,6 +273,8 @@ public class Main extends Application {
         encryptButton.setStyle("-fx-background-color: #007bff; -fx-text-fill: white; -fx-font-size: 10pt;");;
         Button decryptButton = new Button(" 解密 ");
         decryptButton.setStyle("-fx-background-color: rgba(255,0,0,0.53); -fx-text-fill: white; -fx-font-size: 10pt;");
+        Button clearButton = new Button(" 清空 ");
+        clearButton.setStyle("-fx-background-color: rgb(0,210,0); -fx-text-fill: white; -fx-font-size: 10pt;");
         Button uploadButton = new Button("上传文件");
         Button exportButton = new Button("导出结果");
         // ----------------------------------------------------------------------
@@ -288,7 +290,7 @@ public class Main extends Application {
         // ----------------------------------------------------------------------
 
         HBox three = new HBox();
-        three.getChildren().addAll(uploadButton, exportButton, inputDataTypeLabel, inputDataTypeComboBox, outputDataTypeLabel, outputDataTypeComboBox, encryptButton, decryptButton);
+        three.getChildren().addAll(uploadButton, exportButton, inputDataTypeLabel, inputDataTypeComboBox, outputDataTypeLabel, outputDataTypeComboBox, encryptButton, decryptButton, clearButton);
         three.setAlignment(Pos.CENTER);
         three.setSpacing(10);
         three.setPadding(new Insets(0, 0, 10, 0));
@@ -760,6 +762,12 @@ public class Main extends Application {
                 alert.setContentText(e.getMessage());
                 alert.showAndWait();
             }
+        });
+
+        // 处理清空按钮
+        clearButton.setOnAction(event -> {
+            inputTextArea.clear();
+            outputTextArea.clear();
         });
 
         // 处理拖拽文件
